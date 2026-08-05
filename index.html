@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DFW EDM &amp; House Events</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0a0a10;
@@ -30,10 +33,37 @@
     padding:18px 28px;border-bottom:1px solid var(--border);
     background:var(--bg2);flex-wrap:wrap;
   }
+
+  .glitch-text{
+    font-family:'Anton',sans-serif;
+    font-weight:400;
+    color:#fff;
+    position:relative;
+    display:inline-block;
+    transform:skewX(-8deg);
+    line-height:1;
+  }
+  .glitch-text::before,
+  .glitch-text::after{
+    content:attr(data-text);
+    position:absolute;
+    left:0;top:0;
+    width:100%;
+    z-index:-1;
+  }
+  .glitch-text::before{
+    color:#ff2f5b;
+    transform:translate(-0.05em,-0.04em);
+    mix-blend-mode:screen;
+  }
+  .glitch-text::after{
+    color:#1fd2ff;
+    transform:translate(0.05em,0.04em);
+    mix-blend-mode:screen;
+  }
+
   .logo{
-    font-weight:800;font-size:22px;letter-spacing:0.5px;
-    background:linear-gradient(90deg,var(--pink),var(--purple));
-    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-size:24px;letter-spacing:1px;
     margin-right:auto;
   }
   .search-input{
@@ -60,29 +90,13 @@
 
   .hero{padding:64px 28px 36px;position:relative;overflow:hidden;}
   .hero-title{
-    position:relative;
-    font-size:56px;font-weight:900;line-height:1.05;margin:0 0 14px;
-    letter-spacing:0.5px;
-    background:linear-gradient(90deg,var(--pink),var(--purple) 55%,var(--cyan));
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-    text-shadow:
-      0 0 8px rgba(236,72,153,0.55),
-      0 0 22px rgba(139,92,246,0.45),
-      0 0 46px rgba(34,211,238,0.28);
-    filter:drop-shadow(0 0 2px rgba(236,72,153,0.6));
-    animation:flicker 4.5s infinite ease-in-out;
-  }
-  .hero-title::before{
-    content:attr(data-text);
-    position:absolute;left:0;top:0;right:0;
-    background:linear-gradient(90deg,var(--pink),var(--purple) 55%,var(--cyan));
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:blur(14px);opacity:0.55;
-    z-index:-1;
+    font-size:64px;
+    margin:0 0 18px;
+    animation:flicker 5s infinite ease-in-out;
   }
   @keyframes flicker{
     0%,19%,21%,23%,54%,56%,100%{opacity:1;}
-    20%,22%,55%{opacity:0.82;}
+    20%,22%,55%{opacity:0.85;}
   }
   .subtitle{color:var(--sub);font-size:16px;margin:0 0 22px;max-width:640px;}
   .month-pill{
@@ -139,7 +153,7 @@
   footer{padding:24px 28px 40px;color:var(--muted);font-size:12px;text-align:center;}
 
   @media (max-width:640px){
-    .hero-title{font-size:36px;}
+    .hero-title{font-size:38px;}
     header.nav{padding:14px 16px;}
   }
 </style>
@@ -147,14 +161,14 @@
 <body>
 
 <header class="nav">
-  <div class="logo">DFW EDM</div>
+  <div class="logo glitch-text" data-text="DFW EDM">DFW EDM</div>
   <input type="text" class="search-input" id="searchInput" placeholder="Search artist or venue...">
   <select class="dropdown" id="venueSelect"><option value="">All Venues</option></select>
   <select class="dropdown" id="genreSelect"><option value="">All Genres</option></select>
 </header>
 
 <section class="hero">
-  <h1 class="hero-title" data-text="DFW EDM Events">DFW EDM Events</h1>
+  <h1 class="hero-title glitch-text" data-text="DFW EDM Events">DFW EDM Events</h1>
   <p class="subtitle">Rolling 5-month lookahead across Dallas&ndash;Fort Worth. Direct ticket links first, resale backups included.</p>
   <span class="month-pill" id="monthPill">August 2026</span>
 </section>
