@@ -3,406 +3,316 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DFW EDM / House / Electronic Events</title>
-<script src="events.js"></script>
+<title>DFW EDM &amp; House Events</title>
 <style>
-  :root {
-    --bg: #0b0b12;
-    --bg-elev: #14141f;
-    --card: #181822;
-    --text: #f2f2f7;
-    --muted: #9a9ab0;
-    --border: #2a2a3a;
-    --accent: #ff3d81;
-    --purple: #8b5cf6;
-    --orange: #ff8a3d;
-    --blue: #3d9bff;
-    --gold: #f2c14e;
-    --cyan: #3ddad0;
-    --pink: #ff3d81;
-    --green: #4ee08a;
+  :root{
+    --bg:#0a0a10;
+    --bg2:#0f0f18;
+    --card:#14141f;
+    --border:#23232f;
+    --text:#f2f2f6;
+    --sub:#9a9aa8;
+    --muted:#6f6f7d;
+    --pink:#ec4899;
+    --purple:#8b5cf6;
+    --blue:#3b82f6;
+    --cyan:#22d3ee;
+    --orange:#f97316;
+    --gold:#eab308;
+    --green:#22c55e;
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-  }
-  a { color: inherit; text-decoration: none; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  a{color:inherit;text-decoration:none;}
 
-  .topnav {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: rgba(11,11,18,0.92);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border);
-    padding: 12px 20px;
+  header.nav{
+    display:flex;align-items:center;gap:16px;
+    padding:18px 28px;border-bottom:1px solid var(--border);
+    background:var(--bg2);flex-wrap:wrap;
   }
-  .topnav-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
+  .logo{
+    font-weight:800;font-size:22px;letter-spacing:0.5px;
+    background:linear-gradient(90deg,var(--pink),var(--purple));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    margin-right:auto;
   }
-  .brand {
-    font-weight: 800;
-    font-size: 18px;
-    background: linear-gradient(90deg, var(--pink), var(--purple));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    margin-right: auto;
+  .search-input{
+    flex:1;min-width:180px;max-width:340px;
+    background:#101018;border:1px solid var(--border);color:var(--text);
+    border-radius:10px;padding:10px 14px;font-size:14px;outline:none;
   }
-  input[type="text"], select {
-    background: var(--bg-elev);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 999px;
-    padding: 8px 16px;
-    font-size: 14px;
-    outline: none;
-  }
-  input[type="text"] { min-width: 200px; }
-  input[type="text"]:focus, select:focus { border-color: var(--accent); }
+  .search-input::placeholder{color:var(--muted);}
+  .search-input:focus{border-color:var(--purple);}
 
-  .hero {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 36px 20px 10px;
+  select.dropdown{
+    appearance:none;-webkit-appearance:none;
+    background:#ffffff;color:#1a1a24;
+    border:1px solid #e4e4ea;border-radius:10px;
+    padding:10px 36px 10px 14px;font-size:14px;font-weight:600;
+    cursor:pointer;min-width:150px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%236b6b78'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;
+    box-shadow:0 1px 2px rgba(0,0,0,0.15);
+    transition:box-shadow .15s ease, transform .1s ease;
   }
-  .hero h1 {
-    font-size: clamp(28px, 5vw, 44px);
-    margin: 0 0 6px;
-    background: linear-gradient(90deg, var(--pink), var(--purple), var(--blue));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  select.dropdown:hover{box-shadow:0 2px 8px rgba(236,72,153,0.18);}
+  select.dropdown:focus{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,0.35);}
+
+  .hero{padding:64px 28px 36px;position:relative;overflow:hidden;}
+  .hero-title{
+    position:relative;
+    font-size:56px;font-weight:900;line-height:1.05;margin:0 0 14px;
+    letter-spacing:0.5px;
+    background:linear-gradient(90deg,var(--pink),var(--purple) 55%,var(--cyan));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:
+      0 0 8px rgba(236,72,153,0.55),
+      0 0 22px rgba(139,92,246,0.45),
+      0 0 46px rgba(34,211,238,0.28);
+    filter:drop-shadow(0 0 2px rgba(236,72,153,0.6));
+    animation:flicker 4.5s infinite ease-in-out;
   }
-  .hero p { color: var(--muted); margin: 0; font-size: 15px; }
-
-  .container { max-width: 1200px; margin: 0 auto; padding: 10px 20px 60px; }
-
-  .month-tab {
-    display: inline-block;
-    background: var(--bg-elev);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 6px 14px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 600;
-    margin: 24px 0 14px;
+  .hero-title::before{
+    content:attr(data-text);
+    position:absolute;left:0;top:0;right:0;
+    background:linear-gradient(90deg,var(--pink),var(--purple) 55%,var(--cyan));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:blur(14px);opacity:0.55;
+    z-index:-1;
+  }
+  @keyframes flicker{
+    0%,19%,21%,23%,54%,56%,100%{opacity:1;}
+    20%,22%,55%{opacity:0.82;}
+  }
+  .subtitle{color:var(--sub);font-size:16px;margin:0 0 22px;max-width:640px;}
+  .month-pill{
+    display:inline-block;background:#15151f;border:1px solid var(--border);
+    color:var(--sub);font-size:13px;font-weight:600;
+    padding:8px 16px;border-radius:999px;
   }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+  main{padding:8px 28px 60px;max-width:1400px;margin:0 auto;}
+  .month-header{
+    font-size:14px;font-weight:700;color:var(--sub);
+    text-transform:uppercase;letter-spacing:1px;
+    margin:34px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);
   }
+  .grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:20px;
+  }
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    overflow:hidden;display:flex;flex-direction:column;
+    transition:transform .15s ease, border-color .15s ease;
+  }
+  .card:hover{transform:translateY(-3px);border-color:#3a3a4c;}
+  .card-image{
+    height:150px;background-size:cover;background-position:center;
+    position:relative;
+  }
+  .genre-badge{
+    position:absolute;top:10px;left:10px;
+    background:rgba(10,10,16,0.75);backdrop-filter:blur(4px);
+    color:#fff;font-size:11px;font-weight:700;
+    padding:4px 10px;border-radius:999px;
+  }
+  .card-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;}
+  .card-artist{font-size:16px;font-weight:700;line-height:1.25;}
+  .card-meta{font-size:13px;color:var(--sub);}
+  .card-venue{font-size:13px;color:var(--muted);}
+  .card-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .btn{
+    font-size:12px;font-weight:700;padding:8px 12px;border-radius:8px;
+    border:1px solid var(--border);flex:1;text-align:center;
+  }
+  .btn-direct{background:linear-gradient(90deg,var(--pink),var(--purple));color:#fff;border:none;}
+  .btn-resale{background:transparent;color:var(--sub);}
+  .btn-resale:hover{color:var(--text);border-color:#3a3a4c;}
 
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: transform .15s ease, border-color .15s ease;
-  }
-  .card:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .monitored{margin-top:50px;padding-top:20px;border-top:1px solid var(--border);}
+  .monitored h3{font-size:15px;color:var(--sub);text-transform:uppercase;letter-spacing:1px;}
+  .monitored-item{font-size:14px;color:var(--muted);margin:6px 0;}
+  .monitored-item b{color:var(--sub);}
+  .closed-note{margin-top:20px;font-size:13px;color:var(--muted);font-style:italic;}
 
-  .card-cover {
-    position: relative;
-    height: 150px;
-    background-size: cover;
-    background-position: center;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 10px;
-  }
-  .card-cover::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 100%);
-  }
-  .genre-label, .date-chip {
-    position: relative;
-    z-index: 1;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 9px;
-    border-radius: 999px;
-    backdrop-filter: blur(4px);
-  }
-  .genre-label {
-    background: rgba(0,0,0,0.45);
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-  .date-chip {
-    background: rgba(255,255,255,0.92);
-    color: #111;
-  }
+  footer{padding:24px 28px 40px;color:var(--muted);font-size:12px;text-align:center;}
 
-  .card-body { padding: 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .artist { font-size: 16px; font-weight: 700; line-height: 1.25; margin: 0; }
-  .venue-row { font-size: 13px; color: var(--muted); }
-  .venue-row .venue-name { color: var(--text); font-weight: 600; }
-  .time-row { font-size: 12px; color: var(--muted); }
-
-  .ticket-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .btn-direct, .btn-resale {
-    font-size: 12px;
-    font-weight: 700;
-    padding: 7px 12px;
-    border-radius: 8px;
-    text-align: center;
-  }
-  .btn-direct {
-    background: var(--accent);
-    color: #fff;
-    flex: 1;
-  }
-  .btn-resale {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-  }
-  .btn-resale:hover { border-color: var(--accent); color: var(--text); }
-
-  .empty-state {
-    text-align: center;
-    color: var(--muted);
-    padding: 60px 20px;
-    font-size: 15px;
-  }
-
-  .monitored-section {
-    margin-top: 50px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border);
-  }
-  .monitored-section h2 { font-size: 18px; margin: 0 0 4px; }
-  .monitored-section p.sub { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
-  .monitored-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 10px;
-  }
-  .monitored-item {
-    background: var(--bg-elev);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
-    font-size: 13px;
-  }
-  .monitored-item .vname { font-weight: 700; margin-bottom: 3px; }
-  .monitored-item .vnote { color: var(--muted); font-size: 12px; }
-
-  footer {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 30px 20px 60px;
-    color: var(--muted);
-    font-size: 12px;
-    border-top: 1px solid var(--border);
+  @media (max-width:640px){
+    .hero-title{font-size:36px;}
+    header.nav{padding:14px 16px;}
   }
 </style>
 </head>
 <body>
 
-<div class="topnav">
-  <div class="topnav-inner">
-    <div class="brand">DFW EDM</div>
-    <input type="text" id="searchInput" placeholder="Search artist or venue...">
-    <select id="venueSelect"><option value="">All Venues</option></select>
-    <select id="genreSelect"><option value="">All Genres</option></select>
-  </div>
-</div>
+<header class="nav">
+  <div class="logo">DFW EDM</div>
+  <input type="text" class="search-input" id="searchInput" placeholder="Search artist or venue...">
+  <select class="dropdown" id="venueSelect"><option value="">All Venues</option></select>
+  <select class="dropdown" id="genreSelect"><option value="">All Genres</option></select>
+</header>
 
-<div class="hero">
-  <h1>DFW Electronic &amp; House Events</h1>
-  <p id="heroSub">Rolling 5-month lookahead across Dallas–Fort Worth. Direct ticket links first, resale backups included.</p>
-</div>
+<section class="hero">
+  <h1 class="hero-title" data-text="DFW EDM Events">DFW EDM Events</h1>
+  <p class="subtitle">Rolling 5-month lookahead across Dallas&ndash;Fort Worth. Direct ticket links first, resale backups included.</p>
+  <span class="month-pill" id="monthPill">August 2026</span>
+</section>
 
-<div class="container">
-  <div id="results"></div>
-  <div id="monitoredSection" class="monitored-section">
-    <h2>Also on our radar</h2>
-    <p class="sub">These venues are checked weekly but have no confirmed EDM/house shows in the current window.</p>
-    <div id="monitoredList" class="monitored-list"></div>
-  </div>
-</div>
+<main id="app">
+  <div id="eventsContainer"></div>
+  <div class="monitored" id="monitoredSection"></div>
+  <p class="closed-note" id="closedNote"></p>
+</main>
 
-<footer>
-  Last updated: <span id="lastUpdated"></span>. Built for Demir — data pulled from venue and ticketing sites; always confirm dates/prices at checkout.
-</footer>
+<footer>DFW EDM &middot; refreshed weekly &middot; last updated <span id="lastUpdated"></span></footer>
 
+<script src="events.js"></script>
 <script>
-function parseLocalDate(str) {
-  if (!str) return null;
-  const [y,m,d] = str.split("-").map(Number);
-  return new Date(y, m-1, d);
-}
-
-function genreColor(genre) {
-  const g = (genre || "").toLowerCase();
-  if (g.includes("techno")) return "var(--purple)";
-  if (g.includes("bass") || g.includes("dubstep") || g.includes("trap")) return "var(--orange)";
-  if (g.includes("trance")) return "var(--blue)";
-  if (g.includes("festival")) return "var(--gold)";
-  if (g.includes("house")) return "var(--cyan)";
-  if (g.includes("drum")) return "var(--green)";
-  return "var(--pink)";
-}
-
-function fmtDate(dateStr, recurring) {
-  if (!dateStr) return recurring || "Ongoing";
-  const d = parseLocalDate(dateStr);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
-
-function monthKey(dateStr) {
-  if (!dateStr) return "Recurring";
-  const d = parseLocalDate(dateStr);
-  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-}
-
-let allVenueKeys = new Set();
-let allGenres = new Set();
-EVENTS.forEach(e => {
-  allVenueKeys.add(e.venue);
-  if (e.genre) allGenres.add(e.genre);
-});
-
-const venueSelect = document.getElementById("venueSelect");
-Array.from(allVenueKeys).sort((a,b) => (VENUES[a]?.name||a).localeCompare(VENUES[b]?.name||b)).forEach(key => {
-  const opt = document.createElement("option");
-  opt.value = key;
-  opt.textContent = VENUES[key] ? VENUES[key].name : key;
-  venueSelect.appendChild(opt);
-});
-
-const genreSelect = document.getElementById("genreSelect");
-Array.from(allGenres).sort().forEach(g => {
-  const opt = document.createElement("option");
-  opt.value = g;
-  opt.textContent = g;
-  genreSelect.appendChild(opt);
-});
-
-function cardHTML(e) {
-  const venue = VENUES[e.venue] || { name: e.venue, address: "" };
-  const color = genreColor(e.genre);
-  const bg = e.image
-    ? `background-image: linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.55)), url('${e.image.replace(/'/g,"\\'")}');`
-    : `background-image: linear-gradient(135deg, ${color}, ${color}66);`;
-  const dateLabel = fmtDate(e.date, e.recurring);
-  const resaleLinks = (e.resale || []).map(r =>
-    `<a class="btn-resale" href="${r.url}" target="_blank" rel="noopener">${r.site}</a>`
-  ).join("");
-  return `
-    <div class="card">
-      <div class="card-cover" style="${bg}">
-        <span class="genre-label">${e.genre || ""}</span>
-        <span class="date-chip">${dateLabel}</span>
-      </div>
-      <div class="card-body">
-        <p class="artist">${e.artist}</p>
-        <div class="venue-row"><span class="venue-name">${venue.name}</span></div>
-        <div class="time-row">${e.time || ""}${venue.address ? " · " + venue.address : ""}</div>
-        <div class="ticket-row">
-          <a class="btn-direct" href="${e.direct}" target="_blank" rel="noopener">Direct Tickets</a>
-          ${resaleLinks}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function render() {
-  const search = document.getElementById("searchInput").value.trim().toLowerCase();
-  const venueFilter = venueSelect.value;
-  const genreFilter = genreSelect.value;
-  const today = new Date(); today.setHours(0,0,0,0);
-
-  let filtered = EVENTS.filter(e => {
-    if (e.date) {
-      const d = parseLocalDate(e.date);
-      if (d < today) return false;
+(function(){
+  var GENRE_COLORS = [
+    {k:["house"],c:"var(--purple)"},
+    {k:["techno"],c:"var(--blue)"},
+    {k:["trance"],c:"var(--cyan)"},
+    {k:["bass","dubstep","trap"],c:"var(--orange)"},
+    {k:["drum"],c:"var(--green)"},
+    {k:["festival"],c:"var(--gold)"}
+  ];
+  function genreColor(genre){
+    if(!genre) return "var(--pink)";
+    var g = genre.toLowerCase();
+    for(var i=0;i<GENRE_COLORS.length;i++){
+      for(var j=0;j<GENRE_COLORS[i].k.length;j++){
+        if(g.indexOf(GENRE_COLORS[i].k[j])!==-1) return GENRE_COLORS[i].c;
+      }
     }
-    if (venueFilter && e.venue !== venueFilter) return false;
-    if (genreFilter && e.genre !== genreFilter) return false;
-    if (search) {
-      const hay = (e.artist + " " + (VENUES[e.venue]?.name || "")).toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
-    return true;
-  });
-
-  filtered.sort((a,b) => {
-    if (!a.date) return 1;
-    if (!b.date) return -1;
-    return parseLocalDate(a.date) - parseLocalDate(b.date);
-  });
-
-  const results = document.getElementById("results");
-  if (filtered.length === 0) {
-    results.innerHTML = `<div class="empty-state">No events match your filters. Try clearing search or filters.</div>`;
-    return;
+    return "var(--pink)";
+  }
+  function fmtDate(d){
+    if(!d) return "Recurring";
+    var parts = d.split("-");
+    var dt = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
+    return dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+  }
+  function monthKey(d){
+    if(!d) return "Recurring";
+    var parts = d.split("-");
+    var dt = new Date(Number(parts[0]), Number(parts[1])-1, 1);
+    return dt.toLocaleDateString("en-US",{month:"long",year:"numeric"});
   }
 
-  let html = "";
-  let lastMonth = null;
-  filtered.forEach(e => {
-    const mk = monthKey(e.date);
-    if (mk !== lastMonth) {
-      if (lastMonth !== null) html += `</div>`;
-      html += `<div class="month-tab">${mk}</div><div class="grid">`;
-      lastMonth = mk;
-    }
-    html += cardHTML(e);
-  });
-  html += `</div>`;
-  results.innerHTML = html;
-}
+  var venueSelect = document.getElementById("venueSelect");
+  var genreSelect = document.getElementById("genreSelect");
+  var searchInput = document.getElementById("searchInput");
+  var eventsContainer = document.getElementById("eventsContainer");
+  var monitoredSection = document.getElementById("monitoredSection");
+  var closedNote = document.getElementById("closedNote");
+  var lastUpdatedEl = document.getElementById("lastUpdated");
 
-function renderMonitored() {
-  const list = document.getElementById("monitoredList");
-  if (typeof MONITORED_NO_CURRENT_EVENTS === "undefined") return;
-  let html = "";
-  MONITORED_NO_CURRENT_EVENTS.forEach(key => {
-    const v = VENUES[key];
-    if (!v) return;
-    const note = (typeof MONITORED_NOTES !== "undefined" && MONITORED_NOTES[key]) ? MONITORED_NOTES[key] : "Checked weekly.";
-    html += `
-      <a class="monitored-item" href="${v.site}" target="_blank" rel="noopener">
-        <div class="vname">${v.name}</div>
-        <div class="vnote">${note}</div>
-      </a>
-    `;
+  lastUpdatedEl.textContent = typeof LAST_UPDATED !== "undefined" ? LAST_UPDATED : "";
+  closedNote.textContent = typeof CLOSED_VENUES_NOTE !== "undefined" ? CLOSED_VENUES_NOTE : "";
+
+  Object.keys(VENUES).forEach(function(key){
+    if(VENUES[key].closed) return;
+    var opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = VENUES[key].name;
+    venueSelect.appendChild(opt);
   });
-  if (typeof CLOSED_VENUES_NOTE !== "undefined") {
-    html += `<div class="monitored-item"><div class="vname">Stereo Live Dallas (Closed)</div><div class="vnote">${CLOSED_VENUES_NOTE}</div></div>`;
+
+  var genres = [];
+  EVENTS.forEach(function(e){
+    if(e.genre && genres.indexOf(e.genre) === -1) genres.push(e.genre);
+  });
+  genres.sort().forEach(function(g){
+    var opt = document.createElement("option");
+    opt.value = g; opt.textContent = g;
+    genreSelect.appendChild(opt);
+  });
+
+  function cardHTML(e){
+    var venueName = VENUES[e.venue] ? VENUES[e.venue].name : e.venue;
+    var bg = e.image
+      ? "linear-gradient(180deg, rgba(10,10,16,0.05), rgba(10,10,16,0.65)), url('" + e.image + "')"
+      : "linear-gradient(135deg, " + genreColor(e.genre) + ", rgba(0,0,0,0.4))";
+    var resaleLinks = (e.resale||[]).map(function(r){
+      return '<a class="btn btn-resale" href="' + r.url + '" target="_blank" rel="noopener">' + r.site + '</a>';
+    }).join("");
+    return (
+      '<div class="card">' +
+        '<div class="card-image" style="background-image:' + bg + '">' +
+          '<span class="genre-badge">' + (e.genre || "") + '</span>' +
+        '</div>' +
+        '<div class="card-body">' +
+          '<div class="card-artist">' + e.artist + '</div>' +
+          '<div class="card-meta">' + (e.recurring ? e.recurring : fmtDate(e.date)) + (e.time ? " &middot; " + e.time : "") + '</div>' +
+          '<div class="card-venue">' + venueName + '</div>' +
+          '<div class="card-actions">' +
+            '<a class="btn btn-direct" href="' + e.direct + '" target="_blank" rel="noopener">Buy Direct</a>' +
+            resaleLinks +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
   }
-  list.innerHTML = html;
-}
 
-document.getElementById("searchInput").addEventListener("input", render);
-venueSelect.addEventListener("change", render);
-genreSelect.addEventListener("change", render);
+  function render(){
+    var venueFilter = venueSelect.value;
+    var genreFilter = genreSelect.value;
+    var q = searchInput.value.trim().toLowerCase();
 
-document.getElementById("lastUpdated").textContent = (typeof LAST_UPDATED !== "undefined") ? LAST_UPDATED : "";
+    var filtered = EVENTS.filter(function(e){
+      if(venueFilter && e.venue !== venueFilter) return false;
+      if(genreFilter && e.genre !== genreFilter) return false;
+      if(q){
+        var venueName = VENUES[e.venue] ? VENUES[e.venue].name.toLowerCase() : "";
+        if(e.artist.toLowerCase().indexOf(q)===-1 && venueName.indexOf(q)===-1) return false;
+      }
+      return true;
+    });
 
-render();
-renderMonitored();
+    filtered.sort(function(a,b){
+      if(!a.date) return 1;
+      if(!b.date) return -1;
+      return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+    });
+
+    var groups = [];
+    var groupMap = {};
+    filtered.forEach(function(e){
+      var mk = monthKey(e.date);
+      if(!groupMap[mk]){
+        groupMap[mk] = [];
+        groups.push(mk);
+      }
+      groupMap[mk].push(e);
+    });
+
+    var html = "";
+    groups.forEach(function(mk){
+      html += '<div class="month-header">' + mk + '</div>';
+      html += '<div class="grid">' + groupMap[mk].map(cardHTML).join("") + '</div>';
+    });
+    if(!filtered.length){
+      html = '<p style="color:var(--muted);padding:40px 0;">No events match your filters.</p>';
+    }
+    eventsContainer.innerHTML = html;
+
+    var monHtml = '<h3>Currently monitored, no shows announced yet</h3>';
+    (typeof MONITORED_NO_CURRENT_EVENTS !== "undefined" ? MONITORED_NO_CURRENT_EVENTS : []).forEach(function(key){
+      var name = VENUES[key] ? VENUES[key].name : key;
+      var note = (typeof MONITORED_NOTES !== "undefined" && MONITORED_NOTES[key]) ? MONITORED_NOTES[key] : "";
+      monHtml += '<div class="monitored-item"><b>' + name + '</b> &mdash; ' + note + '</div>';
+    });
+    monitoredSection.innerHTML = monHtml;
+  }
+
+  venueSelect.addEventListener("change", render);
+  genreSelect.addEventListener("change", render);
+  searchInput.addEventListener("input", render);
+
+  render();
+})();
 </script>
 
 </body>
