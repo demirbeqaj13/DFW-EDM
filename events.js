@@ -21,7 +21,7 @@ const VENUES = {
 function resale(artist, venueCity) {
   const q = encodeURIComponent(`${artist} ${venueCity}`);
   return [
-    { site: "StubHub", url: `https://www.stubhub.com/find?q=${q}` },
+    { site: "SeatGeek", url: `https://seatgeek.com/search?search=${q}` },
     { site: "Vivid Seats", url: `https://www.vividseats.com/search?searchTerm=${q}` }
   ];
 }

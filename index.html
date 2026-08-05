@@ -135,10 +135,13 @@
   .card-artist{font-size:16px;font-weight:700;line-height:1.25;}
   .card-meta{font-size:13px;color:var(--sub);}
   .card-venue{font-size:13px;color:var(--muted);}
-  .card-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .card-actions{display:flex;align-items:stretch;gap:8px;margin-top:10px;flex-wrap:wrap;}
   .btn{
-    font-size:12px;font-weight:700;padding:8px 12px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    height:38px;
+    font-size:12px;font-weight:700;padding:0 10px;border-radius:8px;
     border:1px solid var(--border);flex:1;text-align:center;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .btn-direct{background:linear-gradient(90deg,var(--pink),var(--purple));color:#fff;border:none;}
   .btn-resale{background:transparent;color:var(--sub);}
