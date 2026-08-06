@@ -1,4 +1,4 @@
-const LAST_UPDATED = "2026-08-04";
+const LAST_UPDATED = "2026-08-06";
 
 const VENUES = {
   "silo": { name: "SILO Dallas", address: "1340 Manufacturing St, Dallas, TX", site: "https://silodallas.com/events" },
@@ -137,15 +137,16 @@ const EVENTS = [
   { artist: "Lights All Night 2026", venue: "fairpark", date: "2026-12-30", time: "6:00 PM", genre: "Festival — All Genres", direct: "https://wl.eventim.us/event/Lights-All-Night-2026/696830?afflky=LightsAllNight", image: "https://2026-lightsallnight-com.imgix.net/2026/06/ef6c7bb0-meta.png?auto=compress,format", resale: resale("Lights All Night 2026", "Fair Park Dallas (Festival)") },
   { artist: "Lights All Night 2026 (Night 2)", venue: "fairpark", date: "2026-12-31", time: "6:00 PM", genre: "Festival — All Genres", direct: "https://wl.eventim.us/event/Lights-All-Night-2026/696830?afflky=LightsAllNight", image: "https://2026-lightsallnight-com.imgix.net/2026/06/ef6c7bb0-meta.png?auto=compress,format", resale: resale("Lights All Night 2026 (Night 2)", "Fair Park Dallas (Festival)") },
   { artist: "Ritual Fridays / Voltage Saturdays (After Hours, weekly 2-5AM)", venue: "coba", date: null, time: "2:00 AM - 5:00 AM", genre: "House / Techno", direct: "https://www.cobadallas.com/buytickets", image: "https://static.wixstatic.com/media/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg/v1/fit/w_2500,h_1330,al_c/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg", recurring: "Every Friday & Saturday", resale: resale("Ritual Fridays / Voltage Saturdays (After Hours, weekly 2-5AM)", "Coba (After Hours)") },
+  { artist: "SVDDEN DEATH", venue: "bombfactory", date: "2026-09-04", time: "8:00 PM", genre: "Dubstep / Riddim", direct: "https://www.axs.com/events/1518717/svdden-death-tickets", image: "https://images.discovery-prod.axs.com/2026/07/uploadedimage_6a54f4c1a70ef.jpg", resale: resale("SVDDEN DEATH", "The Bomb Factory") },
+  { artist: "Whethan", venue: "bombfactory", date: "2026-10-16", time: "9:00 PM", genre: "Electronic / Future Bass", direct: "https://www.axs.com/events/1452493/whethan-tickets", image: "https://images.discovery-prod.axs.com/2026/05/uploadedimage_6a0e6d708c8fc.jpg", resale: resale("Whethan", "The Bomb Factory") },
+  { artist: "SABAI x HOANG", venue: "studiofactory", date: "2026-10-17", time: "9:00 PM", genre: "Electronic / Dance-Pop", direct: "https://www.axs.com/events/1527112/sabai-x-hoang-tickets", image: "https://images.discovery-prod.axs.com/2026/07/uploadedimage_6a585e214723c.jpg", resale: resale("SABAI x HOANG", "The Studio at The Bomb Factory") },
 ];
 
 const MONITORED_NO_CURRENT_EVENTS = [
-  "bombfactory", "studiofactory", "sounders", "deepellumartco", "toyotamusic", "dosequis", "dickies"
+  "sounders", "deepellumartco", "toyotamusic", "dosequis", "dickies"
 ];
 
 const MONITORED_NOTES = {
-  bombfactory: "No EDM/house-DJ shows currently on sale; recent bookings have been rock/pop/comedy. Checked weekly.",
-  studiofactory: "No EDM/house-DJ shows currently on sale. Checked weekly.",
   sounders: "Active venue but no dated EDM lineup posted yet for this window. Checked weekly.",
   deepellumartco: "No EDM/house-DJ shows currently on sale; recent bookings are indie/rock/comedy. Checked weekly.",
   toyotamusic: "No confirmed EDM/house shows in this window; occasional EDM tour stops happen at The Pavilion. Checked weekly.",
