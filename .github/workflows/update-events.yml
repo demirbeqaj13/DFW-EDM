@@ -2,8 +2,8 @@ name: Weekly events update
 
 on:
   schedule:
-    # Every Monday 9:00 UTC (~4am Central)
-    - cron: "0 9 * * 1"
+    # Every 3 days at 9:00 UTC (~4am Central)
+    - cron: "0 9 */3 * *"
   workflow_dispatch: {}
 
 permissions:
@@ -33,4 +33,4 @@ jobs:
         run: |
           git config user.name "edmdfw-bot"
           git config user.email "actions@github.com"
-          git diff --quiet -- events.js || (git add events.js && git commit -m "Automated weekly events update" && git push)
+          git diff --quiet -- events.js || (git add events.js && git commit -m "Automated events update" && git push)
