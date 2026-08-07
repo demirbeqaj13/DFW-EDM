@@ -44,6 +44,12 @@ VENUES = {
     "coba": {"name": "Coba (After Hours)", "address": "2800 Canton St, Dallas, TX", "site": "https://www.cobadallas.com/"},
 }
 
+# Large, mixed-genre venues where a major touring EDM act can easily get lost
+# among dozens of non-electronic bookings, or where the calendar page paginates
+# by month and doesn't surface far-out shows on the first fetch. These get an
+# extra, mandatory cross-check search rather than relying on a single page fetch.
+HIGH_RISK_MIXED_GENRE_VENUES = ["dickies", "dosequis", "toyotamusic", "bombfactory", "studiofactory"]
+
 VENUE_FALLBACK_IMAGES = {
     "silo": "https://silodallas.com/og-image.png",
     "ductwork": "https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png",
@@ -75,17 +81,29 @@ TASK:
    crossover, hyperpop-adjacent electronic acts, and DJ sets generally. When in doubt because an act
    straddles electronic and another genre (e.g. an "electropop" or "pop-EDM" artist), err on the side
    of including them with an accurate genre label rather than skipping them.
-4. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
+4. HIGH-RISK VENUES -- {", ".join(VENUES[k]["name"] for k in HIGH_RISK_MIXED_GENRE_VENUES)}: these are
+   large arenas/amphitheaters that book mostly non-electronic acts (country, rock, family shows,
+   comedy, sports), which makes it easy to skim past the one big EDM headliner buried in a long
+   calendar, and their calendar pages often paginate by month so a single fetch of the main events
+   page may not surface shows that are several months out. For each of these venues you MUST, in
+   addition to fetching the venue's own events page, run at least one supplementary web_search
+   specifically like "<venue name> 2026 EDM OR electronic OR house OR techno OR dance tour" to catch
+   major touring electronic artists (the kind who play arenas -- e.g. John Summit, Kaskade, ILLENIUM,
+   Zedd, Marshmello, Excision, etc.) that the calendar page alone might not have surfaced. Do not
+   conclude a high-risk venue has "no EDM shows" without having run this supplementary search first.
+   A missed headline arena show (a major, widely-touring artist) is a much worse error than a missed
+   small club night, so err heavily on the side of extra searching for these venues specifically.
+5. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
    direct ticket purchase URL (the venue's own primary ticket link, not a resale site).
-5. For each event, try to find a promotional image: visit the individual ticket page and look for an
+6. For each event, try to find a promotional image: visit the individual ticket page and look for an
    og:image meta tag or the event's featured artwork. If you cannot find one, leave image as null --
    the script will apply a venue fallback image automatically.
-6. If a venue currently has zero electronic/dance events on sale after this artist-by-artist check,
-   do not include it in "events" -- instead add a one-sentence note about it to "monitored_notes"
-   (e.g. "No EDM/house shows currently on sale; recent bookings have been rock/comedy. Checked
-   weekly."). Do not add this note just because the venue's page labels shows generically -- only
-   after checking each listed act.
-7. Do not guess or invent events, dates, or URLs. Every "direct" URL must be copied exactly from an
+7. If a venue currently has zero electronic/dance events on sale after this artist-by-artist check
+   (and, for high-risk venues, after the supplementary search), do not include it in "events" --
+   instead add a one-sentence note about it to "monitored_notes" (e.g. "No EDM/house shows currently
+   on sale; recent bookings have been rock/comedy. Checked weekly."). Do not add this note just
+   because the venue's page labels shows generically -- only after checking each listed act.
+8. Do not guess or invent events, dates, or URLs. Every "direct" URL must be copied exactly from an
    actual tool result (a link you saw verbatim in a web_search result or a web_fetch response) --
    never construct one by pattern-matching, e.g. assuming an artist's ticket link follows a template
    like "https://<artist-name><year>.eventbrite.com". Real ticketing URLs are irregular (Eventbrite
@@ -130,13 +148,14 @@ room before you finish.
 
 def build_tools():
     return [
-        {"type": "web_search_20250305", "name": "web_search", "max_uses": 40},
-        # Cap how much of each page gets pulled into context -- the event listing
-        # and ticket links are almost always near the top, so we don't need the
-        # full page (nav, footer, bundled JS, etc). This keeps the conversation
-        # much smaller as more venues get fetched, which matters a lot once
-        # prompt caching is in play (less new content per turn = cheaper writes).
-        {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 40, "max_content_tokens": 4000},
+        {"type": "web_search_20250305", "name": "web_search", "max_uses": 50},
+        # Cap how much of each page gets pulled into context. Set generously
+        # (not too tight) since some venue calendar pages -- especially large
+        # arenas with long, mixed-genre listings -- need more than a couple
+        # thousand tokens to reach every event, and missing a major act is far
+        # more costly than a bit of extra token spend. This still avoids
+        # pulling truly bloated pages (nav/footer/bundled JS) in full.
+        {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 50, "max_content_tokens": 10000},
     ]
 
 
@@ -151,7 +170,7 @@ def run_research(client: anthropic.Anthropic) -> dict:
     tools = build_tools()
     accumulated_text = ""
 
-    for _ in range(12):
+    for _ in range(14):
         response = client.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS_PER_TURN,
