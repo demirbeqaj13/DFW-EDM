@@ -24,6 +24,7 @@ import anthropic
 
 MODEL = "claude-sonnet-5"
 OUTPUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "events.js")
+MAX_TOKENS_PER_TURN = 16000
 
 VENUES = {
     "silo": {"name": "SILO Dallas", "address": "1340 Manufacturing St, Dallas, TX", "site": "https://silodallas.com/events"},
@@ -59,24 +60,45 @@ VENUES TO CHECK (use each venue's ticketing/events page as the source of truth):
 {json.dumps({k: v for k, v in VENUES.items() if not v.get("closed")}, indent=2)}
 
 TASK:
-1. For each venue above, visit its events/ticketing page and find every electronic/house/bass/techno/
-   trance/dubstep/drum-and-bass event scheduled in the next ~5 months from today. Skip non-electronic
-   genres (rock, comedy, sports, etc).
-2. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
+1. For each venue above, visit its events/ticketing page and list EVERY act on the calendar for the
+   next ~5 months from today -- do not pre-filter by reading the venue's own genre tag or category
+   label. Venues like The Bomb Factory / The Studio at The Bomb Factory book a mix of genres on the
+   same calendar, so genre must be judged per-artist, not per-venue.
+2. For each act you don't immediately recognize, treat the name as a lead, not a dead end: if it's
+   ambiguous whether the act is electronic/dance music, do a quick web search on the artist name
+   (e.g. "<artist> genre" or "<artist> dubstep OR house OR techno OR EDM") before deciding. Only skip
+   an act once you've confirmed it is not electronic/dance (e.g. confirmed rock band, comedian,
+   sports event).
+3. Include an act if it fits ANY of these electronic/dance subgenres, including hybrid/crossover acts
+   that blend electronic production with other genres: house, tech house, deep house, techno, trance,
+   dubstep, riddim, bass, trap, future bass, drum and bass/jungle, hardstyle, electropop, EDM-pop
+   crossover, hyperpop-adjacent electronic acts, and DJ sets generally. When in doubt because an act
+   straddles electronic and another genre (e.g. an "electropop" or "pop-EDM" artist), err on the side
+   of including them with an accurate genre label rather than skipping them.
+4. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
    direct ticket purchase URL (the venue's own primary ticket link, not a resale site).
-3. For each event, try to find a promotional image: visit the individual ticket page and look for an
+5. For each event, try to find a promotional image: visit the individual ticket page and look for an
    og:image meta tag or the event's featured artwork. If you cannot find one, leave image as null --
    the script will apply a venue fallback image automatically.
-4. If a venue currently has zero electronic events on sale, do not include it in "events" -- instead add
-   a one-sentence note about it to "monitored_notes" (e.g. "No EDM/house shows currently on sale;
-   recent bookings have been rock/comedy. Checked weekly.").
-5. Do not guess or invent events, dates, or URLs. Only include what you can verify by visiting the
-   actual page. If a venue's page fails to load or is ambiguous, add it to monitored_notes instead of
+6. If a venue currently has zero electronic/dance events on sale after this artist-by-artist check,
+   do not include it in "events" -- instead add a one-sentence note about it to "monitored_notes"
+   (e.g. "No EDM/house shows currently on sale; recent bookings have been rock/comedy. Checked
+   weekly."). Do not add this note just because the venue's page labels shows generically -- only
+   after checking each listed act.
+7. Do not guess or invent events, dates, or URLs. Every "direct" URL must be copied exactly from an
+   actual tool result (a link you saw verbatim in a web_search result or a web_fetch response) --
+   never construct one by pattern-matching, e.g. assuming an artist's ticket link follows a template
+   like "https://<artist-name><year>.eventbrite.com". Real ticketing URLs are irregular (Eventbrite
+   links look like eventbrite.com/e/some-slug-1234567890 with a numeric ID; AXS, SeeTickets, etc each
+   have their own real path structure) -- if you notice yourself generating a suspiciously uniform,
+   templated URL across many events, stop and re-fetch the actual page instead. If a venue's page
+   fails to load or a specific event's ticket link is ambiguous, add it to monitored_notes instead of
    guessing.
 
 OUTPUT FORMAT:
-Respond with ONLY a single JSON object between <events_json> and </events_json> tags, no other text
-outside those tags. Do not include markdown code fences inside the tags. Structure:
+Your final message must contain ONLY a single JSON object between <events_json> and </events_json>
+tags -- no preamble sentences, no commentary, no markdown code fences, nothing before the opening
+tag or after the closing tag. Structure:
 
 <events_json>
 {{
@@ -100,6 +122,9 @@ outside those tags. Do not include markdown code fences inside the tags. Structu
 </events_json>
 
 Be thorough but only include venue keys you actually checked. Today's date will be given in the user message.
+Keep the JSON compact (no extra whitespace/indentation) to conserve output tokens -- there are 15
+venues to cover and the full list can run to 100+ events, so verbose formatting risks running out of
+room before you finish.
 """
 
 
@@ -119,23 +144,44 @@ def run_research(client: anthropic.Anthropic) -> dict:
         }
     ]
     tools = build_tools()
+    accumulated_text = ""
 
-    for _ in range(8):
+    for _ in range(12):
         response = client.messages.create(
             model=MODEL,
-            max_tokens=8000,
+            max_tokens=MAX_TOKENS_PER_TURN,
             system=SYSTEM_PROMPT,
             messages=messages,
             tools=tools,
         )
 
+        turn_text = "".join(
+            block.text for block in response.content if getattr(block, "type", None) == "text"
+        )
+
         if response.stop_reason == "pause_turn":
+            # Server-side tool (web_search/web_fetch) needs another round-trip.
             messages.append({"role": "assistant", "content": response.content})
             continue
 
-        final_text = "".join(
-            block.text for block in response.content if getattr(block, "type", None) == "text"
-        )
+        if response.stop_reason == "max_tokens":
+            # Hit the per-turn output cap mid-JSON. Keep what was written and
+            # ask the model to resume from exactly where it stopped rather
+            # than failing outright.
+            accumulated_text += turn_text
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Continue exactly where you left off. Do not repeat any earlier "
+                    "text and do not restart the JSON object -- just keep writing from "
+                    "the exact character you stopped at, and still end with the closing "
+                    "</events_json> tag once the object is complete."
+                ),
+            })
+            continue
+
+        final_text = accumulated_text + turn_text
         match = re.search(r"<events_json>(.*?)</events_json>", final_text, re.S)
         if not match:
             raise RuntimeError("Model did not return an <events_json> block. Raw text:\n" + final_text)
