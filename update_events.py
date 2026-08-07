@@ -449,11 +449,31 @@ def build_events_js(data: dict) -> str:
     return "\n".join(lines)
 
 
+# Markers that typically introduce a support act, collab partner, or subtitle
+# rather than a different headliner -- e.g. "Luke Alessi" and "Luke Alessi +
+# Red Eye" are the same booking, one run just found more detail than the
+# other. Truncating the name at the first marker before normalizing keeps the
+# match key anchored to the headliner instead of the full string, which is
+# what actually varies between runs.
+_CORE_NAME_MARKERS = [
+    " + ", " presents", " Presents", " PRESENTS", "(", " — ", " - ",
+    " b2b ", " B2B ", " x ", " X ", ": ", " w/ ", " W/ ",
+]
+
+
 def normalize_key(artist, venue, event_date):
     """Loose match key so minor renames/punctuation drift between runs (e.g. an
-    added '+ Red Eye' support-act suffix, an em-dash vs hyphen) still count as
-    the same event for merge purposes."""
-    norm_artist = re.sub(r"[^a-z0-9]", "", (artist or "").lower())[:40]
+    added '+ Red Eye' support-act suffix, an em-dash vs hyphen, a "Presents:"
+    prefix) still count as the same event for merge purposes -- otherwise the
+    merge safety net backfires: instead of preventing a dropped event, it
+    creates a duplicate every time a run phrases the same booking slightly
+    differently, which is worse than the problem it was meant to solve."""
+    core = artist or ""
+    for marker in _CORE_NAME_MARKERS:
+        idx = core.find(marker)
+        if idx != -1:
+            core = core[:idx]
+    norm_artist = re.sub(r"[^a-z0-9]", "", core.lower())[:40]
     return (venue, event_date, norm_artist)
 
 
