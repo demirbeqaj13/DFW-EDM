@@ -220,6 +220,12 @@
     var dt = new Date(Number(parts[0]), Number(parts[1])-1, 1);
     return dt.toLocaleDateString("en-US",{month:"long",year:"numeric"});
   }
+  function todayStr(){
+    var d = new Date();
+    var m = String(d.getMonth()+1).padStart(2,"0");
+    var day = String(d.getDate()).padStart(2,"0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
 
   var venueSelect = document.getElementById("venueSelect");
   var genreSelect = document.getElementById("genreSelect");
@@ -280,8 +286,10 @@
     var venueFilter = venueSelect.value;
     var genreFilter = genreSelect.value;
     var q = searchInput.value.trim().toLowerCase();
+    var todayKey = todayStr();
 
     var filtered = EVENTS.filter(function(e){
+      if(e.date && e.date < todayKey) return false;
       if(venueFilter && e.venue !== venueFilter) return false;
       if(genreFilter && e.genre !== genreFilter) return false;
       if(q){
