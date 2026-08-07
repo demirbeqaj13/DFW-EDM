@@ -82,6 +82,11 @@ VENUE_FALLBACK_IMAGES = {
     "ductwork": "https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png",
     "itlldo": "https://static1.squarespace.com/static/687877d212aabf1aafc5c893/t/687883bae925b43e83551a43/1752728506887/_ITLLDOCLUB.png?format=1500w",
     "greenelephant": "https://static.wixstatic.com/media/608a53_4a8795eff0ef4c958d80635f6a0fd54a~mv2.jpg/v1/fit/w_480,h_641,q_90,enc_avif,quality_auto/608a53_4a8795eff0ef4c958d80635f6a0fd54a~mv2.jpg",
+    # CTRL Room's own plain venue logo -- deliberately not any specific event's DJ
+    # flyer. Used for the recurring "Haus Sundays" card and any other CTRL Room
+    # event missing its own image, since a specific artist's flyer would go stale
+    # or look misleading once reused for a different week/act.
+    "ctrlroom": "https://cdn.prod.website-files.com/69c17a74a763699ce65b1b9f/69c24f01971e47d2420adc69_CTRL-OpenGraph.png",
 }
 
 # StubHub resale inventory realistically only exists for shows happening soon --
