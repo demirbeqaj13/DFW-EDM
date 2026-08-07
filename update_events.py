@@ -130,8 +130,13 @@ room before you finish.
 
 def build_tools():
     return [
-        {"type": "web_search_20250305", "name": "web_search", "max_uses": 60},
-        {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 60},
+        {"type": "web_search_20250305", "name": "web_search", "max_uses": 40},
+        # Cap how much of each page gets pulled into context -- the event listing
+        # and ticket links are almost always near the top, so we don't need the
+        # full page (nav, footer, bundled JS, etc). This keeps the conversation
+        # much smaller as more venues get fetched, which matters a lot once
+        # prompt caching is in play (less new content per turn = cheaper writes).
+        {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 40, "max_content_tokens": 4000},
     ]
 
 
@@ -153,6 +158,13 @@ def run_research(client: anthropic.Anthropic) -> dict:
             system=SYSTEM_PROMPT,
             messages=messages,
             tools=tools,
+            # Automatic prompt caching: the system prompt + tool defs + the
+            # growing message history (every venue page fetched so far) get
+            # cached and reused across turns instead of being billed at full
+            # price every single API call. Cache reads are ~10% of the normal
+            # input token price, which matters a lot for a loop like this that
+            # resends the whole accumulated research history each turn.
+            cache_control={"type": "ephemeral"},
         )
 
         turn_text = "".join(
