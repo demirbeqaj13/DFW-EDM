@@ -144,15 +144,4 @@ const EVENTS = [
   { artist: "John Summit: CTRL ESCAPE ARENA TOUR (2nd Show)", venue: "dickies", date: "2026-11-08", time: "7:00 PM", genre: "House / Tech House", direct: "https://www.ticketmaster.com/event/0C0064B49E2D86C5", image: "https://dickiesarena.com/wp-content/uploads/2026/05/JohnSummit_11.8_1200x700.jpg", resale: resale("John Summit: CTRL ESCAPE ARENA TOUR (2nd Show)", "Dickies Arena") },
 ];
 
-const MONITORED_NO_CURRENT_EVENTS = [
-  "sounders", "deepellumartco", "toyotamusic", "dosequis"
-];
-
-const MONITORED_NOTES = {
-  sounders: "Active venue but no dated EDM lineup posted yet for this window. Checked weekly.",
-  deepellumartco: "No EDM/house-DJ shows currently on sale; recent bookings are indie/rock/comedy. Checked weekly.",
-  toyotamusic: "No confirmed EDM/house shows in this window; occasional EDM tour stops happen at The Pavilion. Checked weekly.",
-  dosequis: "No confirmed EDM/house shows in this window (amphitheater, mostly rock/pop tours). Checked weekly.",
-};
-
 const CLOSED_VENUES_NOTE = "Stereo Live Dallas closed permanently in early 2026 and is no longer booking shows. Kept here for reference only.";

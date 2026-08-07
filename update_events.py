@@ -89,20 +89,16 @@ TASK:
    addition to fetching the venue's own events page, run at least one supplementary web_search
    specifically like "<venue name> 2026 EDM OR electronic OR house OR techno OR dance tour" to catch
    major touring electronic artists (the kind who play arenas -- e.g. John Summit, Kaskade, ILLENIUM,
-   Zedd, Marshmello, Excision, etc.) that the calendar page alone might not have surfaced. Do not
-   conclude a high-risk venue has "no EDM shows" without having run this supplementary search first.
-   A missed headline arena show (a major, widely-touring artist) is a much worse error than a missed
-   small club night, so err heavily on the side of extra searching for these venues specifically.
+   Zedd, Marshmello, Excision, etc.) that the calendar page alone might not have surfaced. A missed
+   headline arena show is a much worse error than a missed small club night, so err heavily on the
+   side of extra searching for these venues specifically.
 5. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
    direct ticket purchase URL (the venue's own primary ticket link, not a resale site).
 6. For each event, try to find a promotional image: visit the individual ticket page and look for an
    og:image meta tag or the event's featured artwork. If you cannot find one, leave image as null --
    the script will apply a venue fallback image automatically.
-7. If a venue currently has zero electronic/dance events on sale after this artist-by-artist check
-   (and, for high-risk venues, after the supplementary search), do not include it in "events" --
-   instead add a one-sentence note about it to "monitored_notes" (e.g. "No EDM/house shows currently
-   on sale; recent bookings have been rock/comedy. Checked weekly."). Do not add this note just
-   because the venue's page labels shows generically -- only after checking each listed act.
+7. If a venue currently has zero electronic/dance events on sale, simply don't include it in "events"
+   -- there's no need to explain why or report on venues with nothing booked, just omit them.
 8. Do not guess or invent events, dates, or URLs. Every "direct" URL must be copied exactly from an
    actual tool result (a link you saw verbatim in a web_search result or a web_fetch response) --
    never construct one by pattern-matching, e.g. assuming an artist's ticket link follows a template
@@ -110,7 +106,7 @@ TASK:
    links look like eventbrite.com/e/some-slug-1234567890 with a numeric ID; AXS, SeeTickets, etc each
    have their own real path structure) -- if you notice yourself generating a suspiciously uniform,
    templated URL across many events, stop and re-fetch the actual page instead. If a venue's page
-   fails to load or a specific event's ticket link is ambiguous, add it to monitored_notes instead of
+   fails to load or a specific event's ticket link is ambiguous, skip that specific event rather than
    guessing.
 
 OUTPUT FORMAT:
@@ -132,10 +128,7 @@ tag or after the closing tag. Structure:
       "image": "https://... or null",
       "recurring": "optional string, only for undated recurring series like weekly nights"
     }}
-  ],
-  "monitored_notes": {{
-    "venue_key": "one sentence explaining why this venue has no listed events right now"
-  }}
+  ]
 }}
 </events_json>
 
@@ -229,7 +222,6 @@ def js_str(value):
 
 def build_events_js(data: dict) -> str:
     events = data["events"]
-    monitored_notes = data.get("monitored_notes", {})
     last_updated = data.get("last_updated", date.today().isoformat())
 
     for e in events:
@@ -274,17 +266,6 @@ def build_events_js(data: dict) -> str:
         obj += f', resale: resale({js_str(e["artist"])}, {js_str(venue_name)}) }},'
         lines.append(obj)
     lines.append("];")
-    lines.append("")
-
-    monitored_keys = [k for k in VENUES if not VENUES[k].get("closed") and k in monitored_notes]
-    lines.append("const MONITORED_NO_CURRENT_EVENTS = [")
-    lines.append("  " + ", ".join(js_str(k) for k in monitored_keys))
-    lines.append("];")
-    lines.append("")
-    lines.append("const MONITORED_NOTES = {")
-    for k in monitored_keys:
-        lines.append(f"  {k}: {js_str(monitored_notes[k])},")
-    lines.append("};")
     lines.append("")
     lines.append(f'const CLOSED_VENUES_NOTE = {js_str(CLOSED_VENUES_NOTE)};')
     lines.append("")

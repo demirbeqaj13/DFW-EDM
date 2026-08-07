@@ -89,7 +89,7 @@
   select.dropdown:hover{box-shadow:0 2px 8px rgba(236,72,153,0.18);}
   select.dropdown:focus{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,0.35);}
 
-  .hero{padding:64px 28px 36px;position:relative;overflow:hidden;}
+  .hero{padding:64px 28px 16px;position:relative;overflow:hidden;}
   .hero-title{
     font-size:64px;
     margin:0 0 18px;
@@ -99,12 +99,7 @@
     0%,19%,21%,23%,54%,56%,100%{opacity:1;}
     20%,22%,55%{opacity:0.85;}
   }
-  .subtitle{color:var(--sub);font-size:16px;margin:0 0 22px;max-width:640px;}
-  .month-pill{
-    display:inline-block;background:#15151f;border:1px solid var(--border);
-    color:var(--sub);font-size:13px;font-weight:600;
-    padding:8px 16px;border-radius:999px;
-  }
+  .subtitle{color:var(--sub);font-size:16px;margin:0;max-width:640px;}
 
   main{padding:8px 28px 60px;max-width:1400px;margin:0 auto;}
   .month-header{
@@ -148,11 +143,7 @@
   .btn-resale{background:transparent;color:var(--sub);}
   .btn-resale:hover{color:var(--text);border-color:#3a3a4c;}
 
-  .monitored{margin-top:50px;padding-top:20px;border-top:1px solid var(--border);}
-  .monitored h3{font-size:15px;color:var(--sub);text-transform:uppercase;letter-spacing:1px;}
-  .monitored-item{font-size:14px;color:var(--muted);margin:6px 0;}
-  .monitored-item b{color:var(--sub);}
-  .closed-note{margin-top:20px;font-size:13px;color:var(--muted);font-style:italic;}
+  .closed-note{margin-top:40px;font-size:13px;color:var(--muted);font-style:italic;}
 
   footer{padding:24px 28px 40px;color:var(--muted);font-size:12px;text-align:center;}
 
@@ -176,12 +167,10 @@
 <section class="hero">
   <h1 class="hero-title glitch-text" data-text="DFW EDM Events">DFW EDM Events</h1>
   <p class="subtitle">The pulse for Dallas-Fort Worth's electronic scene, all in one place. We'll get you in &mdash; one way or another.</p>
-  <span class="month-pill" id="monthPill">August 2026</span>
 </section>
 
 <main id="app">
   <div id="eventsContainer"></div>
-  <div class="monitored" id="monitoredSection"></div>
   <p class="closed-note" id="closedNote"></p>
 </main>
 
@@ -231,7 +220,6 @@
   var genreSelect = document.getElementById("genreSelect");
   var searchInput = document.getElementById("searchInput");
   var eventsContainer = document.getElementById("eventsContainer");
-  var monitoredSection = document.getElementById("monitoredSection");
   var closedNote = document.getElementById("closedNote");
   var lastUpdatedEl = document.getElementById("lastUpdated");
 
@@ -325,14 +313,6 @@
       html = '<p style="color:var(--muted);padding:40px 0;">No events match your filters.</p>';
     }
     eventsContainer.innerHTML = html;
-
-    var monHtml = '<h3>Currently monitored, no shows announced yet</h3>';
-    (typeof MONITORED_NO_CURRENT_EVENTS !== "undefined" ? MONITORED_NO_CURRENT_EVENTS : []).forEach(function(key){
-      var name = VENUES[key] ? VENUES[key].name : key;
-      var note = (typeof MONITORED_NOTES !== "undefined" && MONITORED_NOTES[key]) ? MONITORED_NOTES[key] : "";
-      monHtml += '<div class="monitored-item"><b>' + name + '</b> &mdash; ' + note + '</div>';
-    });
-    monitoredSection.innerHTML = monHtml;
   }
 
   venueSelect.addEventListener("change", render);
