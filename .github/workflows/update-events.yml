@@ -33,4 +33,13 @@ jobs:
         run: |
           git config user.name "edmdfw-bot"
           git config user.email "actions@github.com"
-          git diff --quiet -- events.js || (git add events.js && git commit -m "Automated events update" && git push)
+          # Re-sync with whatever is currently on the remote before committing.
+          # The updater takes several minutes to run, so main can move (a manual
+          # upload, another run) while it's working. events.js is fully
+          # regenerated from scratch each run (not diffed against the old file),
+          # so it's always safe to rebase our starting point onto the latest
+          # remote commit right before we commit -- this avoids "rejected:
+          # fetch first" failures instead of just discovering them at push time.
+          git fetch origin main
+          git reset --soft origin/main
+          git diff --quiet -- events.js || (git add events.js && git commit -m "Automated events update" && git push origin main)
