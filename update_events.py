@@ -64,6 +64,19 @@ HIGH_RISK_MIXED_GENRE_VENUES = ["dickies", "dosequis", "toyotamusic", "bombfacto
 # electronic/dance music artist before adding them.
 SELECTIVE_GENRE_VENUES = ["villagebeach"]
 
+# Some venues' primary website is a slow-moving marketing page that lags behind
+# where they actually announce new bookings. It'll Do Club's own homepage confirmed
+# this: a Linktree page (which is literally the "TICKETS" link on their homepage)
+# had a "Chromeo (DJ set)" show under an "ANNOUNCED THIS WEEK!" section, and a
+# TwoFaced show, neither of which had made it onto the homepage's own agenda list
+# yet. For venues listed here, ALWAYS fetch this secondary URL in addition to the
+# main site -- treat anything under a "this week" / "just announced" / similarly
+# freshness-flagged section as high-priority, since it represents bookings the
+# venue's main page hasn't caught up to displaying yet.
+VENUE_SECONDARY_SOURCES = {
+    "itlldo": "https://linktr.ee/itlldoclub",
+}
+
 VENUE_FALLBACK_IMAGES = {
     "silo": "https://silodallas.com/og-image.png",
     "ductwork": "https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png",
@@ -132,6 +145,12 @@ TASK:
    DJ set does not count -- only include artists whose actual career/discography is electronic/dance
    music. Be conservative here: when genuinely unsure whether an act counts, leave them out rather
    than include them.
+5a. SECONDARY SOURCES -- for venues listed in VENUE_SECONDARY_SOURCES ({", ".join(VENUES[k]["name"] + " -> " + VENUE_SECONDARY_SOURCES[k] for k in VENUE_SECONDARY_SOURCES)}),
+   fetch that URL IN ADDITION to the venue's main site -- it's a real page the venue itself
+   directs ticket buyers to, not a workaround. Treat anything flagged there as newly announced
+   (e.g. under a "this week" / "just announced" heading) as high-priority: the venue's main
+   page has a track record of lagging behind it, so an event you only see on the secondary
+   source is not a lower-confidence find -- add it the same as anything from the main site.
 6. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
    direct ticket purchase URL (the venue's own primary ticket link, not a resale site).
 7. For each event, try to find a promotional image: visit the individual ticket page and look for an
