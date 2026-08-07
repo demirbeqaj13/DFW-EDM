@@ -16,6 +16,7 @@ const VENUES = {
   "dickies": { name: "Dickies Arena", address: "1911 Montgomery St, Fort Worth, TX", site: "https://dickiesarena.com/events" },
   "fairpark": { name: "Fair Park Dallas (Festival)", address: "1300 Robert B Cullum Blvd, Dallas, TX", site: "https://lightsallnight.com/" },
   "coba": { name: "Coba (After Hours)", address: "2800 Canton St, Dallas, TX", site: "https://www.cobadallas.com/" },
+  "villagebeach": { name: "The Village Beach Club", address: "5670 Village Glen Dr, Dallas, TX 75206", site: "https://villagebeachclub.com/event-calendar/" },
 };
 
 function resale(artist, venueCity) {
@@ -142,6 +143,8 @@ const EVENTS = [
   { artist: "SABAI x HOANG", venue: "studiofactory", date: "2026-10-17", time: "9:00 PM", genre: "Electronic / Dance-Pop", direct: "https://www.axs.com/events/1527112/sabai-x-hoang-tickets", image: "https://images.discovery-prod.axs.com/2026/07/uploadedimage_6a585e214723c.jpg", resale: resale("SABAI x HOANG", "The Studio at The Bomb Factory") },
   { artist: "John Summit: CTRL ESCAPE ARENA TOUR", venue: "dickies", date: "2026-11-07", time: "7:00 PM", genre: "House / Tech House", direct: "https://www.ticketmaster.com/event/0C0064B3CF15B693", image: "https://dickiesarena.com/wp-content/uploads/2026/05/Static_Digital-Dickies-Website_1200x700_JohnSummit_2026_Regional_DICKIESARENA_1107-1.jpg", resale: resale("John Summit: CTRL ESCAPE ARENA TOUR", "Dickies Arena") },
   { artist: "John Summit: CTRL ESCAPE ARENA TOUR (2nd Show)", venue: "dickies", date: "2026-11-08", time: "7:00 PM", genre: "House / Tech House", direct: "https://www.ticketmaster.com/event/0C0064B49E2D86C5", image: "https://dickiesarena.com/wp-content/uploads/2026/05/JohnSummit_11.8_1200x700.jpg", resale: resale("John Summit: CTRL ESCAPE ARENA TOUR (2nd Show)", "Dickies Arena") },
+  { artist: "CID", venue: "villagebeach", date: "2026-09-05", time: "11:00 AM", genre: "Tech House", direct: "https://speakeasygo.com/village-beach-club/cid-at-village-beach-club?eid=EVE-B2FCOA", image: "https://assets0.dostuffmedia.com/uploads/aws_asset/aws_asset/33217182/8046bd86-4559-4867-bec7-f39cc2eed275.png", resale: resale("CID", "The Village Beach Club") },
+  { artist: "Malaa", venue: "villagebeach", date: "2026-09-20", time: "11:00 AM", genre: "House / Bass House", direct: "https://speakeasygo.com/event/EVE-GYPT9U?t=tvdwebsite", image: "https://www.thevillagedallas.com/wp-content/uploads/2026/07/2160x1080-38.png", resale: resale("Malaa", "The Village Beach Club") },
 ];
 
 const CLOSED_VENUES_NOTE = "Stereo Live Dallas closed permanently in early 2026 and is no longer booking shows. Kept here for reference only.";

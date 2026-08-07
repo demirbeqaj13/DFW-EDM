@@ -42,6 +42,7 @@ VENUES = {
     "dickies": {"name": "Dickies Arena", "address": "1911 Montgomery St, Fort Worth, TX", "site": "https://dickiesarena.com/events"},
     "fairpark": {"name": "Fair Park Dallas (Festival)", "address": "1300 Robert B Cullum Blvd, Dallas, TX", "site": "https://lightsallnight.com/"},
     "coba": {"name": "Coba (After Hours)", "address": "2800 Canton St, Dallas, TX", "site": "https://www.cobadallas.com/"},
+    "villagebeach": {"name": "The Village Beach Club", "address": "5670 Village Glen Dr, Dallas, TX 75206", "site": "https://villagebeachclub.com/event-calendar/"},
 }
 
 # Large, mixed-genre venues where a major touring EDM act can easily get lost
@@ -49,6 +50,13 @@ VENUES = {
 # by month and doesn't surface far-out shows on the first fetch. These get an
 # extra, mandatory cross-check search rather than relying on a single page fetch.
 HIGH_RISK_MIXED_GENRE_VENUES = ["dickies", "dosequis", "toyotamusic", "bombfactory", "studiofactory"]
+
+# Venues that book a heavy mix of non-electronic acts (hip hop, country,
+# reality-TV-personality "DJ" sets, etc.) alongside real electronic artists.
+# These need extra scrutiny in the OTHER direction from HIGH_RISK_MIXED_GENRE_VENUES:
+# don't just include every billed "DJ" -- verify the act is a genuine
+# electronic/dance music artist before adding them.
+SELECTIVE_GENRE_VENUES = ["villagebeach"]
 
 VENUE_FALLBACK_IMAGES = {
     "silo": "https://silodallas.com/og-image.png",
@@ -92,14 +100,24 @@ TASK:
    Zedd, Marshmello, Excision, etc.) that the calendar page alone might not have surfaced. A missed
    headline arena show is a much worse error than a missed small club night, so err heavily on the
    side of extra searching for these venues specifically.
-5. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
+5. SELECTIVE-GENRE VENUES -- {", ".join(VENUES[k]["name"] for k in SELECTIVE_GENRE_VENUES)}: unlike
+   the high-risk venues above, this is the OPPOSITE failure mode -- these venues book heavily mixed
+   lineups where NOT every billed act is electronic music (hip hop artists, country artists, reality
+   TV personalities doing novelty "DJ" sets, etc. all get billed alongside genuine house/dance DJs).
+   Do NOT include an act here just because they're labeled "DJ" on the venue's site. Verify each act
+   is a real, dedicated electronic/dance music artist (check their genre via search if you don't
+   recognize them) before including. A reality-TV personality or a rapper doing a one-off pool party
+   DJ set does not count -- only include artists whose actual career/discography is electronic/dance
+   music. Be conservative here: when genuinely unsure whether an act counts, leave them out rather
+   than include them.
+6. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
    direct ticket purchase URL (the venue's own primary ticket link, not a resale site).
-6. For each event, try to find a promotional image: visit the individual ticket page and look for an
+7. For each event, try to find a promotional image: visit the individual ticket page and look for an
    og:image meta tag or the event's featured artwork. If you cannot find one, leave image as null --
    the script will apply a venue fallback image automatically.
-7. If a venue currently has zero electronic/dance events on sale, simply don't include it in "events"
+8. If a venue currently has zero electronic/dance events on sale, simply don't include it in "events"
    -- there's no need to explain why or report on venues with nothing booked, just omit them.
-8. Do not guess or invent events, dates, or URLs. Every "direct" URL must be copied exactly from an
+9. Do not guess or invent events, dates, or URLs. Every "direct" URL must be copied exactly from an
    actual tool result (a link you saw verbatim in a web_search result or a web_fetch response) --
    never construct one by pattern-matching, e.g. assuming an artist's ticket link follows a template
    like "https://<artist-name><year>.eventbrite.com". Real ticketing URLs are irregular (Eventbrite
