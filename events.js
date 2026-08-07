@@ -21,9 +21,10 @@ const VENUES = {
 
 function resale(artist, venueCity) {
   const q = encodeURIComponent(`${artist} ${venueCity}`);
+  const vividUrl = `https://www.vividseats.com/search?searchTerm=${q}`;
   return [
     { site: "SeatGeek", url: `https://seatgeek.com/search?search=${q}` },
-    { site: "Vivid Seats", url: `https://www.vividseats.com/search?searchTerm=${q}` }
+    { site: "Vivid Seats", url: `redirect.html?to=${encodeURIComponent(vividUrl)}` }
   ];
 }
 

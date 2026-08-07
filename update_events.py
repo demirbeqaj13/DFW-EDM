@@ -262,9 +262,10 @@ def build_events_js(data: dict) -> str:
     lines.append(
         "function resale(artist, venueCity) {\n"
         "  const q = encodeURIComponent(`${artist} ${venueCity}`);\n"
+        "  const vividUrl = `https://www.vividseats.com/search?searchTerm=${q}`;\n"
         "  return [\n"
         '    { site: "SeatGeek", url: `https://seatgeek.com/search?search=${q}` },\n'
-        '    { site: "Vivid Seats", url: `https://www.vividseats.com/search?searchTerm=${q}` }\n'
+        '    { site: "Vivid Seats", url: `redirect.html?to=${encodeURIComponent(vividUrl)}` }\n'
         "  ];\n"
         "}"
     )
