@@ -24,6 +24,12 @@ import anthropic
 
 MODEL = "claude-sonnet-5"
 OUTPUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "events.js")
+# Raw JSON snapshot of the last successful run, committed to the repo alongside
+# events.js. Read back in on the next run so a transient research miss (a venue
+# page that failed to load, an event the model ran out of budget to re-verify)
+# doesn't silently delete real, still-upcoming events or downgrade a real event
+# image back to null/fallback. See merge_with_previous() below.
+EVENTS_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "events_data.json")
 MAX_TOKENS_PER_TURN = 16000
 
 VENUES = {
@@ -312,6 +318,89 @@ def build_events_js(data: dict) -> str:
     return "\n".join(lines)
 
 
+def normalize_key(artist, venue, event_date):
+    """Loose match key so minor renames/punctuation drift between runs (e.g. an
+    added '+ Red Eye' support-act suffix, an em-dash vs hyphen) still count as
+    the same event for merge purposes."""
+    norm_artist = re.sub(r"[^a-z0-9]", "", (artist or "").lower())[:40]
+    return (venue, event_date, norm_artist)
+
+
+def load_previous_events():
+    if not os.path.exists(EVENTS_DATA_PATH):
+        return []
+    try:
+        with open(EVENTS_DATA_PATH, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        return payload.get("events", [])
+    except Exception as exc:
+        print(f"Could not read previous {EVENTS_DATA_PATH}, skipping merge safety net: {exc}", file=sys.stderr)
+        return []
+
+
+def is_upcoming_or_recurring(event_date_str, today_str):
+    if not event_date_str:
+        return True  # undated recurring series -- always eligible to carry forward
+    return event_date_str >= today_str
+
+
+def merge_with_previous(new_events, previous_events, today_str):
+    """Script-side safety net, independent of whether the model followed its
+    research instructions this run. Two failure modes this guards against,
+    both observed in production:
+
+    1. A whole venue gets silently dropped from the output because its page
+       failed to load / the run ran out of turn or token budget before
+       reaching it -- NOT because the venue actually has zero events. If a
+       previously-known, still-upcoming event isn't present in this run's
+       results at all, keep it rather than deleting it from the site.
+    2. A per-event image regresses from a real, previously-found image back
+       to null (which then falls back to a generic venue image) because this
+       run's research didn't re-find/re-fetch it. If this run has an event
+       but with a null image and a previous run had a real image for the
+       same event, keep the old image instead of losing it.
+
+    Events are matched by (venue, date, normalized artist). Anything from the
+    previous run that has already passed (date before today) is never carried
+    forward, so this can't resurrect expired shows.
+    """
+    prev_by_key = {}
+    for e in previous_events:
+        if not is_upcoming_or_recurring(e.get("date"), today_str):
+            continue
+        prev_by_key[normalize_key(e.get("artist"), e.get("venue"), e.get("date"))] = e
+
+    new_by_key = {
+        normalize_key(e.get("artist"), e.get("venue"), e.get("date")): e for e in new_events
+    }
+
+    for key, e in new_by_key.items():
+        prev = prev_by_key.get(key)
+        if not prev:
+            continue
+        if not e.get("image") and prev.get("image"):
+            e["image"] = prev["image"]
+        if not e.get("stubhub") and prev.get("stubhub"):
+            e["stubhub"] = prev["stubhub"]
+
+    merged = list(new_events)
+    carried = [prev for key, prev in prev_by_key.items() if key not in new_by_key]
+    if carried:
+        by_venue = {}
+        for e in carried:
+            by_venue.setdefault(e.get("venue"), []).append(e.get("artist"))
+        summary = "; ".join(f'{v}: {", ".join(a)}' for v, a in by_venue.items())
+        print(
+            f"Carried forward {len(carried)} previously-known event(s) not present in this "
+            f"run's research ({summary}) -- these were kept from the last successful run "
+            f"rather than dropped. Verify they still look right if this persists across runs.",
+            file=sys.stderr,
+        )
+        merged.extend(carried)
+
+    return merged
+
+
 def main():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -325,9 +414,21 @@ def main():
         print("No events returned, refusing to overwrite events.js with an empty file", file=sys.stderr)
         sys.exit(1)
 
+    today_str = date.today().isoformat()
+    previous_events = load_previous_events()
+    data["events"] = merge_with_previous(data["events"], previous_events, today_str)
+
     js = build_events_js(data)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write(js)
+
+    with open(EVENTS_DATA_PATH, "w", encoding="utf-8") as f:
+        json.dump(
+            {"last_updated": data.get("last_updated", today_str), "events": data["events"]},
+            f,
+            ensure_ascii=False,
+            indent=None,
+        )
 
     print(f"Wrote {len(data['events'])} events to {OUTPUT_PATH}")
 
