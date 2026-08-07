@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="impact-site-verification" value="066b796d-f1c7-4cc0-9612-45cf2bc4143c">
+<meta name="impact-site-verification" value="542e9681-75be-44b8-a4c7-a84bc7050674">
 <title>DFW EDM &amp; House Events</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -209,8 +209,11 @@
     var dt = new Date(Number(parts[0]), Number(parts[1])-1, 1);
     return dt.toLocaleDateString("en-US",{month:"long",year:"numeric"});
   }
+  // "Today" for filtering purposes is shifted 30 minutes late, so an event
+  // dated today doesn't disappear right at midnight -- it stays up until
+  // 12:30 AM the following day, since people sometimes head out last-minute.
   function todayStr(){
-    var d = new Date();
+    var d = new Date(Date.now() - 30 * 60 * 1000);
     var m = String(d.getMonth()+1).padStart(2,"0");
     var day = String(d.getDate()).padStart(2,"0");
     return d.getFullYear() + "-" + m + "-" + day;
