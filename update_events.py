@@ -78,6 +78,15 @@ TASK:
    next ~5 months from today -- do not pre-filter by reading the venue's own genre tag or category
    label. Venues like The Bomb Factory / The Studio at The Bomb Factory book a mix of genres on the
    same calendar, so genre must be judged per-artist, not per-venue.
+1a. PAGINATION -- many venue calendars (SILO Dallas via do214, and similar list-style pages) only show
+   ~20-25 events on the first page and require clicking "Next Page" / a page=2 link to see events
+   further out. A single fetch of page 1 is NOT enough -- you MUST keep following "next page" /
+   pagination links (page=2, page=3, etc.) until you either reach a page with no further "Next Page"
+   link, or you've gone past the ~5 month lookahead window. This is a known, previously-confirmed
+   failure mode: an entire second page of SILO Dallas events (12+ shows including major headliners
+   like Adriatique, ZHU, San Holo, Eric Prydz) was missed in a prior run because only page 1 was
+   fetched. Treat "the calendar looked short" as a signal to check for pagination, not a signal that
+   the venue has nothing more booked.
 2. For each act you don't immediately recognize, treat the name as a lead, not a dead end: if it's
    ambiguous whether the act is electronic/dance music, do a quick web search on the artist name
    (e.g. "<artist> genre" or "<artist> dubstep OR house OR techno OR EDM") before deciding. Only skip
