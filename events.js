@@ -22,8 +22,7 @@ const VENUES = {
 function resale(artist, venueCity) {
   const q = encodeURIComponent(`${artist} ${venueCity}`);
   return [
-    { site: "SeatGeek", url: `https://seatgeek.com/search?search=${q}` },
-    { site: "StubHub", url: `https://www.stubhub.com/find/s?q=${q}` }
+    { site: "SeatGeek", url: `https://seatgeek.com/search?search=${q}` }
   ];
 }
 
@@ -51,7 +50,7 @@ const EVENTS = [
   { artist: "Sasha & John Digweed — SILO 2 Year Anniversary", venue: "silo", date: "2026-10-03", time: "9:00 PM", genre: "Progressive House / Techno", direct: "https://wl.seetickets.us/event/Sasha-and-John-Digweed-SILO-2-Year-Anniversary-DALLAS/692671?afflky=SILO", image: "https://cdn.vor.us/event/692671/og/9cb8a2fa516146b889ebf20f0f20bef1.image!png.973278.png.SILO_SASHA&JOHN-DIGWEED-1080c1080.png", resale: resale("Sasha & John Digweed — SILO 2 Year Anniversary", "SILO Dallas") },
   { artist: "Bob Moses (club set)", venue: "silo", date: "2026-10-16", time: "9:00 PM", genre: "House", direct: "https://wl.seetickets.us/event/Bob-Moses-club-set-DALLAS/700129?afflky=SILO", image: "https://cdn.vor.us/event/700129/og/d3985bec270e4323bde234d8fba0a107.image!png.660255.png.SILO_BOB-MOSES_1080x1080.png", resale: resale("Bob Moses (club set)", "SILO Dallas") },
   { artist: "Odd Mob", venue: "silo", date: "2026-10-17", time: "9:00 PM", genre: "Bass House", direct: "https://wl.seetickets.us/event/ODD-MOB-DALLAS/694826?afflky=SILO", image: "https://cdn.vor.us/event/694826/og/b6443fdd5d8f48fc97be2a1e7a21bbee.image!png.1896450.png.SILO_ODD-MOB_1080x1080(1).png", resale: resale("Odd Mob", "SILO Dallas") },
-  { artist: "Kettama", venue: "silo", date: "2026-10-23", time: "9:00 PM", genre: "Tech House", direct: "https://wl.seetickets.us/event/KETTAMA-DALLAS/691502?afflky=SILO", image: "https://cdn.vor.us/event/691502/og/25c5bf25d9e04e0ca9bb6bae33ef8c8b.image!png.9511956.png.DDP-KET-SILO-1080x1080.png", resale: resale("Kettama", "SILO Dallas") },
+  { artist: "Kettama", venue: "silo", date: "2026-10-23", time: "9:00 PM", genre: "Tech House", direct: "https://wl.seetickets.us/event/KETTAMA-DALLAS/691502?afflky=SILO", image: "https://cdn.vor.us/event/691502/og/25c5bf25d9e04e0ca9bb6bae33ef8c8b.image!png.9511956.png.DDP-KET-SILO-1080x1080.png", resale: resale("Kettama", "SILO Dallas").concat([{ site: "StubHub", url: "https://www.stubhub.com/kettama-dallas-tickets-10-23-2026/event/161191232/" }]) },
   { artist: "Holy Priest", venue: "silo", date: "2026-09-25", time: "9:00 PM", genre: "Techno", direct: "https://wl.seetickets.us/event/Holy-Priest-DALLAS/693204?afflky=SILO", image: "https://cdn.vor.us/event/693204/og/bae479b5208a4578a61f22aebaf130c3.image!png.263613.png.SILO_HOLY-PRIEST-1080x1080.png", resale: resale("Holy Priest", "SILO Dallas") },
   { artist: "San Holo presents TRUE LOVE IN A MADE UP WORLD", venue: "silo", date: "2026-10-24", time: "9:00 PM", genre: "Future Bass / Melodic Bass", direct: "https://wl.seetickets.us/event/San-Holo-presents-TRUE-LOVE-IN-A-MADE-UP-WORLD-DALLAS/694651?afflky=SILO", image: "https://cdn.vor.us/event/694651/og/d1214d51dbd7442187705c4542653733.image!png.2194221.png.DDP-SAN-SILO1_1080X1080.png", resale: resale("San Holo presents TRUE LOVE IN A MADE UP WORLD", "SILO Dallas") },
   { artist: "Adriatique", venue: "silo", date: "2026-10-30", time: "9:00 PM", genre: "Melodic House / Techno", direct: "https://wl.seetickets.us/event/Adriatique-DALLAS/695269?afflky=SILO", image: "https://cdn.vor.us/event/695269/og/d8199169720b48128125709aab940678.image!png.764548.png.SILO_Adriatique_SUPPORT-1080x1080.png", resale: resale("Adriatique", "SILO Dallas") },

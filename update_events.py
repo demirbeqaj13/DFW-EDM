@@ -135,6 +135,16 @@ TASK:
    templated URL across many events, stop and re-fetch the actual page instead. If a venue's page
    fails to load or a specific event's ticket link is ambiguous, skip that specific event rather than
    guessing.
+10. STUBHUB RESALE LINK -- for each event, also try to find that specific event's real StubHub listing
+    page (do a web_search like "<artist> <venue city> <date> stubhub tickets" and follow through to the
+    actual event page). StubHub does NOT have a generic text-search URL you can template from an
+    artist's name -- every real StubHub link is tied to a specific numeric event ID, e.g.
+    stubhub.com/<slug>/event/123456789/. Only set "stubhub" on an event if you found and can verify
+    (from an actual search result or fetched page) that specific numeric-ID event URL matches the
+    right artist, venue, AND date. If you can't find a confident match within a quick search, leave
+    "stubhub" as null rather than guessing or reusing another event's URL -- a missing StubHub link is
+    fine, a wrong one is not. Do not spend more than one or two searches per event on this -- it's a
+    nice-to-have second resale option, not worth burning your search budget on.
 
 OUTPUT FORMAT:
 Your final message must contain ONLY a single JSON object between <events_json> and </events_json>
@@ -153,6 +163,7 @@ tag or after the closing tag. Structure:
       "genre": "short string, e.g. 'House' or 'Techno' or 'Bass / Trap'",
       "direct": "https://... direct ticket URL",
       "image": "https://... or null",
+      "stubhub": "https://www.stubhub.com/.../event/<id>/ real verified listing URL, or null if not found",
       "recurring": "optional string, only for undated recurring series like weekly nights"
     }}
   ]
@@ -272,8 +283,7 @@ def build_events_js(data: dict) -> str:
         "function resale(artist, venueCity) {\n"
         "  const q = encodeURIComponent(`${artist} ${venueCity}`);\n"
         "  return [\n"
-        '    { site: "SeatGeek", url: `https://seatgeek.com/search?search=${q}` },\n'
-        '    { site: "StubHub", url: `https://www.stubhub.com/find/s?q=${q}` }\n'
+        '    { site: "SeatGeek", url: `https://seatgeek.com/search?search=${q}` }\n'
         "  ];\n"
         "}"
     )
@@ -290,7 +300,10 @@ def build_events_js(data: dict) -> str:
         )
         if e.get("recurring"):
             obj += f', recurring: {js_str(e["recurring"])}'
-        obj += f', resale: resale({js_str(e["artist"])}, {js_str(venue_name)}) }},'
+        resale_expr = f'resale({js_str(e["artist"])}, {js_str(venue_name)})'
+        if e.get("stubhub"):
+            resale_expr += f'.concat([{{ site: "StubHub", url: {js_str(e["stubhub"])} }}])'
+        obj += f', resale: {resale_expr} }},'
         lines.append(obj)
     lines.append("];")
     lines.append("")
