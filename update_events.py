@@ -18,7 +18,7 @@ import json
 import os
 import re
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 import anthropic
 
@@ -70,6 +70,13 @@ VENUE_FALLBACK_IMAGES = {
     "itlldo": "https://static1.squarespace.com/static/687877d212aabf1aafc5c893/t/687883bae925b43e83551a43/1752728506887/_ITLLDOCLUB.png?format=1500w",
     "greenelephant": "https://static.wixstatic.com/media/608a53_4a8795eff0ef4c958d80635f6a0fd54a~mv2.jpg/v1/fit/w_480,h_641,q_90,enc_avif,quality_auto/608a53_4a8795eff0ef4c958d80635f6a0fd54a~mv2.jpg",
 }
+
+# StubHub resale inventory realistically only exists for shows happening soon --
+# searching for it on events 3+ months out mostly wastes budget on dead ends. This
+# caps the dedicated StubHub lookup pass (see run_stubhub_lookup()) to events within
+# this many days, which keeps it well inside a single run's search budget while still
+# catching the vast majority of events that actually have real listings.
+STUBHUB_LOOKUP_WINDOW_DAYS = 30
 
 CLOSED_VENUES_NOTE = "Stereo Live Dallas closed permanently in early 2026 and is no longer booking shows. Kept here for reference only."
 
@@ -141,16 +148,10 @@ TASK:
    templated URL across many events, stop and re-fetch the actual page instead. If a venue's page
    fails to load or a specific event's ticket link is ambiguous, skip that specific event rather than
    guessing.
-10. STUBHUB RESALE LINK -- for each event, also try to find that specific event's real StubHub listing
-    page (do a web_search like "<artist> <venue city> <date> stubhub tickets" and follow through to the
-    actual event page). StubHub does NOT have a generic text-search URL you can template from an
-    artist's name -- every real StubHub link is tied to a specific numeric event ID, e.g.
-    stubhub.com/<slug>/event/123456789/. Only set "stubhub" on an event if you found and can verify
-    (from an actual search result or fetched page) that specific numeric-ID event URL matches the
-    right artist, venue, AND date. If you can't find a confident match within a quick search, leave
-    "stubhub" as null rather than guessing or reusing another event's URL -- a missing StubHub link is
-    fine, a wrong one is not. Do not spend more than one or two searches per event on this -- it's a
-    nice-to-have second resale option, not worth burning your search budget on.
+10. STUBHUB RESALE LINK -- do NOT search for StubHub links in this pass. Always set "stubhub" to null
+    for every event here. StubHub lookups are handled by a separate, dedicated follow-up pass (with its
+    own search budget) that only checks events happening soon, where resale inventory is actually likely
+    to exist -- searching for it here would just compete with your venue-research budget for no benefit.
 
 OUTPUT FORMAT:
 Your final message must contain ONLY a single JSON object between <events_json> and </events_json>
@@ -256,6 +257,117 @@ def run_research(client: anthropic.Anthropic) -> dict:
         return json.loads(match.group(1).strip())
 
     raise RuntimeError("Exceeded max turns without a final answer")
+
+
+STUBHUB_SYSTEM_PROMPT = """You find real StubHub resale listing URLs for a batch of specific
+electronic/dance music events in Dallas-Fort Worth. You will be given a numbered list of events
+(artist, venue, date).
+
+For each event, do a web_search like "<artist> <venue city> <date> stubhub tickets" and, if needed,
+follow through to the actual event page with web_fetch to confirm it is the right artist/venue/date.
+StubHub does NOT have a generic text-search URL you can template from an artist's name -- every real
+StubHub link is tied to a specific numeric event ID, e.g. stubhub.com/<slug>/event/123456789/. Only
+report a URL for an event if you found and can verify (from an actual search result or fetched page)
+that specific numeric-ID event page matches the right artist, venue, AND date. If you can't find a
+confident match within a quick search (1-2 searches), report null for that event rather than guessing
+or reusing another event's URL -- a missing link is fine, a wrong one is not.
+
+Work through the list efficiently -- these are a nice-to-have second resale option, not worth
+exhaustive searching per event. If you're running low on search budget before reaching the end of the
+list, prioritize whichever events happen soonest and report null for the rest rather than leaving the
+JSON incomplete.
+
+Your final message must contain ONLY a single JSON object between <stubhub_json> and </stubhub_json>
+tags -- no preamble, no commentary, nothing before the opening tag or after the closing tag. Structure:
+
+<stubhub_json>
+{"results": [{"i": 0, "stubhub": "https://www.stubhub.com/.../event/<id>/ or null"}]}
+</stubhub_json>
+
+Include exactly one result object per numbered event, using the same "i" index given in the input list.
+"""
+
+
+def build_stubhub_tools():
+    return [
+        {"type": "web_search_20250305", "name": "web_search", "max_uses": 90},
+        {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 40, "max_content_tokens": 4000},
+    ]
+
+
+def run_stubhub_lookup(client: anthropic.Anthropic, events_needing_lookup: list) -> dict:
+    """Dedicated second pass, separate from run_research()'s venue/event research, with
+    its own tool budget. Only called for events within STUBHUB_LOOKUP_WINDOW_DAYS that
+    don't already have a stubhub link (either found this run or carried forward by
+    merge_with_previous()). Returns {index: url} for events where a confident match was
+    found; any failure here is non-fatal -- it just means those events keep stubhub=null,
+    same as if the lookup pass had never run.
+    """
+    if not events_needing_lookup:
+        return {}
+
+    listing = "\n".join(
+        f'{i}. "{e["artist"]}" at {VENUES.get(e["venue"], {}).get("name", e["venue"])}, {e.get("date")}'
+        for i, e in enumerate(events_needing_lookup)
+    )
+    messages = [
+        {
+            "role": "user",
+            "content": f"Find StubHub links for these {len(events_needing_lookup)} events:\n\n{listing}",
+        }
+    ]
+    tools = build_stubhub_tools()
+    accumulated_text = ""
+
+    for _ in range(10):
+        try:
+            response = client.messages.create(
+                model=MODEL,
+                max_tokens=MAX_TOKENS_PER_TURN,
+                system=STUBHUB_SYSTEM_PROMPT,
+                messages=messages,
+                tools=tools,
+                cache_control={"type": "ephemeral"},
+            )
+        except Exception as exc:
+            print(f"StubHub lookup pass hit an API error, skipping (non-fatal): {exc}", file=sys.stderr)
+            return {}
+
+        turn_text = "".join(
+            block.text for block in response.content if getattr(block, "type", None) == "text"
+        )
+
+        if response.stop_reason == "pause_turn":
+            messages.append({"role": "assistant", "content": response.content})
+            continue
+
+        if response.stop_reason == "max_tokens":
+            accumulated_text += turn_text
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Continue exactly where you left off. Do not repeat any earlier text and do not "
+                    "restart the JSON object -- just keep writing from the exact character you stopped "
+                    "at, and still end with the closing </stubhub_json> tag once complete."
+                ),
+            })
+            continue
+
+        final_text = accumulated_text + turn_text
+        match = re.search(r"<stubhub_json>(.*?)</stubhub_json>", final_text, re.S)
+        if not match:
+            print("StubHub lookup pass did not return a parseable result, skipping (non-fatal).", file=sys.stderr)
+            return {}
+        try:
+            parsed = json.loads(match.group(1).strip())
+        except Exception as exc:
+            print(f"StubHub lookup pass returned invalid JSON, skipping (non-fatal): {exc}", file=sys.stderr)
+            return {}
+        return {r["i"]: r["stubhub"] for r in parsed.get("results", []) if r.get("stubhub")}
+
+    print("StubHub lookup pass exceeded max turns, skipping (non-fatal).", file=sys.stderr)
+    return {}
 
 
 def js_str(value):
@@ -417,6 +529,23 @@ def main():
     today_str = date.today().isoformat()
     previous_events = load_previous_events()
     data["events"] = merge_with_previous(data["events"], previous_events, today_str)
+
+    cutoff_str = (date.today() + timedelta(days=STUBHUB_LOOKUP_WINDOW_DAYS)).isoformat()
+    needs_lookup = [
+        e for e in data["events"]
+        if not e.get("stubhub") and e.get("date") and today_str <= e["date"] <= cutoff_str
+    ]
+    if needs_lookup:
+        print(
+            f"Running dedicated StubHub lookup pass for {len(needs_lookup)} event(s) within "
+            f"{STUBHUB_LOOKUP_WINDOW_DAYS} days..."
+        )
+        results = run_stubhub_lookup(client, needs_lookup)
+        for i, url in results.items():
+            if 0 <= i < len(needs_lookup):
+                needs_lookup[i]["stubhub"] = url
+        found = sum(1 for e in needs_lookup if e.get("stubhub"))
+        print(f"StubHub lookup pass found {found} link(s) out of {len(needs_lookup)} near-term event(s) checked.")
 
     js = build_events_js(data)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
