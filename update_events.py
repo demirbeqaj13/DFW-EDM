@@ -137,7 +137,7 @@ TASK:
    addition to fetching the venue's own events page, run at least one supplementary web_search
    specifically like "<venue name> 2026 EDM OR electronic OR house OR techno OR dance tour" to catch
    major touring electronic artists (the kind who play arenas -- e.g. John Summit, Kaskade, ILLENIUM,
-   Zedd, Marshmello, Excision, etc.) that the calendar page alone might not have surfaced. A missed
+   Zedd, Marshmello, Excision, Zeds Dead, Empire of the Sun, etc.) that the calendar page alone might not have surfaced. A missed
    headline arena show is a much worse error than a missed small club night, so err heavily on the
    side of extra searching for these venues specifically.
 5. SELECTIVE-GENRE VENUES -- {", ".join(VENUES[k]["name"] for k in SELECTIVE_GENRE_VENUES)}: unlike

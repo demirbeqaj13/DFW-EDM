@@ -1,4 +1,4 @@
-const LAST_UPDATED = "2026-08-07";
+const LAST_UPDATED = "2026-08-08";
 
 const VENUES = {
   "silo": { name: "SILO Dallas", address: "1340 Manufacturing St, Dallas, TX", site: "https://silodallas.com/events" },
@@ -162,6 +162,8 @@ const EVENTS = [
   { artist: "Holy Priest", venue: "silo", date: "2026-09-24", time: "9:00 PM", genre: "Techno", direct: "https://wl.seetickets.us/event/Holy-Priest-DALLAS/694030?afflky=SILO", image: "https://cdn.vor.us/event/694030/og/0ce64339d3644cb09c8a617b3e5db453.image!png.265030.png.SILO_HOLY-PRIEST_THURSDAY-1080x1080.png", resale: resale("Holy Priest", "SILO Dallas") },
   { artist: "Holy Priest (2nd Show)", venue: "silo", date: "2026-09-25", time: "9:00 PM", genre: "Techno", direct: "https://wl.seetickets.us/event/Holy-Priest-DALLAS/693204?afflky=SILO", image: "https://cdn.vor.us/event/693204/og/bae479b5208a4578a61f22aebaf130c3.image!png.263613.png.SILO_HOLY-PRIEST-1080x1080.png", resale: resale("Holy Priest (2nd Show)", "SILO Dallas") },
   { artist: "Zack Fox", venue: "silo", date: "2026-09-26", time: "9:00 PM", genre: "House", direct: "https://wl.seetickets.us/event/Zack-Fox-DALLAS/693394?afflky=SILO", image: "https://cdn.vor.us/event/693394/og/2d4c990caa754364ad4ad8745bc246a4.image!png.1285495.png.SILO_ZAK-FOX_1080x1080.png", resale: resale("Zack Fox", "SILO Dallas") },
+  { artist: "Zeds Dead + Daily Bread — Journey Of A Lifetime Tour", venue: "dosequis", date: "2026-09-12", time: "8:00 PM", genre: "Bass / Dubstep", direct: "https://www.ticketmaster.com/zeds-dead-journey-of-a-lifetime-dallas-texas-09-12-2026/event/0C006452C645F3E9", image: "https://storage.googleapis.com/media.discodonniepresents.com/2026/03/bc2149c9-static_social-instagram_1080x1350_zedsdead_2026_regional_dosequispavilion_0912.jpg", resale: resale("Zeds Dead + Daily Bread — Journey Of A Lifetime Tour", "Dos Equis Pavilion") },
+  { artist: "Empire of the Sun", venue: "dosequis", date: "2026-09-20", time: "7:30 PM", genre: "Electronic / Synth-Pop", direct: "https://www.axs.com/events/1377139/empire-of-the-sun-tickets", image: null, resale: resale("Empire of the Sun", "Dos Equis Pavilion") },
 ];
 
 const CLOSED_VENUES_NOTE = "Stereo Live Dallas closed permanently in early 2026 and is no longer booking shows. Kept here for reference only.";
