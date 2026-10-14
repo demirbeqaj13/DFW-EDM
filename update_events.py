@@ -605,6 +605,50 @@ def merge_with_previous(new_events, previous_events, today_str):
     return merged
 
 
+def _ticket_id(url):
+    """Ticket URL without tracking query/fragment, for duplicate matching."""
+    return re.sub(r"[?#].*$", "", (url or "").strip().lower()).rstrip("/")
+
+
+def are_duplicate_events(a, b, generic_images):
+    """Same venue and date, plus any one of: the same ticket link, the same
+    event flyer, or names where one contains the other ("AWEN Hybrid" vs
+    "AWEN (Hybrid Set)"). Runs and carry-forward often word the same show
+    differently ("me n u on New Years Eve" vs "NYE with me n u") -- but the
+    ticket link or flyer gives it away."""
+    if a.get("venue") != b.get("venue") or a.get("date") != b.get("date") or not a.get("date"):
+        return False
+    if a.get("direct") and _ticket_id(a.get("direct")) == _ticket_id(b.get("direct")):
+        return True
+    img_a, img_b = a.get("image"), b.get("image")
+    if img_a and img_a == img_b and img_a not in generic_images:
+        return True
+    name_a = re.sub(r"[^a-z0-9]", "", (a.get("artist") or "").lower())
+    name_b = re.sub(r"[^a-z0-9]", "", (b.get("artist") or "").lower())
+    short, long_ = sorted((name_a, name_b), key=len)
+    return len(short) >= 4 and short in long_
+
+
+def dedupe_events(events, generic_images):
+    """Drop duplicate listings of the same show, keeping the first one (this
+    run's research comes before carried-forward events) and filling any
+    fields it's missing (flyer, StubHub link, face focus) from the others."""
+    kept = []
+    dropped = []
+    for e in events:
+        match = next((k for k in kept if are_duplicate_events(k, e, generic_images)), None)
+        if not match:
+            kept.append(e)
+            continue
+        for field in ("image", "stubhub", "focus", "focus_src"):
+            if not match.get(field) and e.get(field):
+                match[field] = e[field]
+        dropped.append(f'{e.get("artist")} (dup of {match.get("artist")}, {e.get("venue")} {e.get("date")})')
+    if dropped:
+        print(f"Removed {len(dropped)} duplicate listing(s): " + "; ".join(dropped))
+    return kept
+
+
 def combine_coba_recurring(events):
     """Replace any separate undated Ritual Fridays / Voltage Saturdays cards
     with the single combined COBA_RECURRING_EVENT card. Dated Coba shows (a
@@ -942,6 +986,7 @@ def main():
                 found += 1
         print(f"Image lookup pass found {found} of {len(missing)} missing flyer(s).")
     fill_face_focus(data["events"], data["venue_images"])
+    data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
 
     cutoff_str = (date.today() + timedelta(days=STUBHUB_LOOKUP_WINDOW_DAYS)).isoformat()
     needs_lookup = [
