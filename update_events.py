@@ -53,6 +53,7 @@ VENUES = {
     "fairpark": {"name": "Fair Park Dallas (Festival)", "address": "1300 Robert B Cullum Blvd, Dallas, TX", "site": "https://lightsallnight.com/"},
     "coba": {"name": "Coba (After Hours)", "address": "2800 Canton St, Dallas, TX", "site": "https://www.cobadallas.com/"},
     "villagebeach": {"name": "The Village Beach Club", "address": "5670 Village Glen Dr, Dallas, TX 75206", "site": "https://villagebeachclub.com/event-calendar/"},
+    "shyboy": {"name": "Shyboy Hi-Fi", "address": "1313 Main St, Dallas, TX 75202", "site": "https://shyboyhifi.com/"},
 }
 
 # Large, mixed-genre venues where a major touring EDM act can easily get lost
@@ -268,6 +269,11 @@ TASK:
    source is not a lower-confidence find -- add it the same as anything from the main site.
 6. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
    direct ticket purchase URL (the venue's own primary ticket link, not a resale site).
+6b. SHYBOY HI-FI -- a downtown hi-fi listening bar that books DJ nights and residencies, many of them
+   FREE (no ticket). Include its DJ / dance-music nights (house, techno, disco, dance, electronic) whether
+   free or ticketed; besides its own site, check its Resident Advisor (ra.co) and ma.to listings. For a
+   free event set "free": true and use the event's own listing page (venue site, RA or ma.to event page,
+   copied verbatim) as "direct". Only set "free" when the listing actually says free / no cover.
 6a. Coba's weekly after-hours nights (Ritual Fridays and Voltage Saturdays) are added by the script
    as a single combined recurring card -- do not include them in "events". Specific dated Coba shows
    (a named guest DJ on a particular night) should still be included as normal.
@@ -309,6 +315,7 @@ tag or after the closing tag. Structure:
       "direct": "https://... direct ticket URL",
       "image": "https://... or null",
       "stubhub": "https://www.stubhub.com/.../event/<id>/ real verified listing URL, or null if not found",
+      "free": "optional, true only when the listing says the event is free / no cover",
       "recurring": "optional string, only for undated recurring series like weekly nights"
     }}
   ]
@@ -316,7 +323,7 @@ tag or after the closing tag. Structure:
 </events_json>
 
 Be thorough but only include venue keys you actually checked. Today's date will be given in the user message.
-Keep the JSON compact (no extra whitespace/indentation) to conserve output tokens -- there are 15
+Keep the JSON compact (no extra whitespace/indentation) to conserve output tokens -- there are 16
 venues to cover and the full list can run to 100+ events, so verbose formatting risks running out of
 room before you finish.
 """
@@ -563,8 +570,10 @@ def build_events_js(data: dict) -> str:
         if e.get("recurring"):
             obj += f', recurring: {js_str(e["recurring"])}'
         resale_expr = f'resale({js_str(e["artist"])}, {js_str(venue_name)})'
-        if not e.get("date"):
-            # Recurring series (Haus Sundays, Ritual Fridays / Voltage
+        if e.get("free") is True:
+            obj += ", free: true"
+        if not e.get("date") or e.get("free") is True:
+            # Free events and recurring series (Haus Sundays, Ritual Fridays / Voltage
             # Saturdays) only ever link to the venue directly -- no resale.
             resale_expr = "[]"
         elif e.get("stubhub"):
@@ -1088,6 +1097,7 @@ def main():
     needs_lookup = [
         e for e in data["events"]
         if not e.get("stubhub") and e.get("date") and today_str <= e["date"] <= cutoff_str
+        and e.get("free") is not True
         and not checked_recently(e, "stubhub_checked", STUBHUB_RECHECK_DAYS, today_str)
     ]
     recently_checked = sum(

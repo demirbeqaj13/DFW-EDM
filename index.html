@@ -242,8 +242,8 @@ function imgFallback(img){
     // strip shows the face instead of the middle of the image.
     var focusStyle = (e.focus && e.image) ? ' style="object-position:' + e.focus + '"' : '';
     var chain = [e.image, venueImage].filter(function(u, i, a){ return u && a.indexOf(u) === i; });
-    // Recurring series only ever get the direct link -- no resale buttons.
-    var resaleLinks = (e.date ? (e.resale||[]) : []).map(function(r){
+    // Recurring series and free events only ever get the direct link -- no resale buttons.
+    var resaleLinks = (e.date && !e.free ? (e.resale||[]) : []).map(function(r){
       return '<a class="btn btn-resale" href="' + r.url + '" target="_blank" rel="noopener">' + r.site + '</a>';
     }).join("");
     return (
@@ -257,7 +257,7 @@ function imgFallback(img){
           '<div class="card-meta">' + (e.recurring ? e.recurring : fmtDate(e.date)) + (e.time ? " &middot; " + e.time : "") + '</div>' +
           '<div class="card-venue">' + venueName + '</div>' +
           '<div class="card-actions">' +
-            '<a class="btn btn-direct" href="' + e.direct + '" target="_blank" rel="noopener">Buy Direct</a>' +
+            '<a class="btn btn-direct" href="' + e.direct + '" target="_blank" rel="noopener">' + (e.free ? 'Free &middot; Event Info' : 'Buy Direct') + '</a>' +
             resaleLinks +
           '</div>' +
         '</div>' +
