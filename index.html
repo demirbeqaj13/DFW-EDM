@@ -139,11 +139,15 @@
 
 <footer>DFW EDM &middot; refreshed weekly &middot; last updated <span id="lastUpdated"></span></footer>
 
-<script src="events.js"></script>
+<script>
+  // Bust browser caches every 10 minutes so new event lists show up promptly.
+  document.write('<script src="events.js?v=' + Math.floor(Date.now() / 600000) + '"><\/script>');
+</script>
 <script>
 function imgFallback(img){
   var rest = (img.getAttribute("data-fallbacks") || "").split("|").filter(Boolean);
   if(!rest.length){ img.onerror = null; img.style.visibility = "hidden"; return; }
+  img.style.objectPosition = "";  // focus was for the flyer, not the venue logo
   img.setAttribute("data-fallbacks", rest.slice(1).join("|"));
   img.src = rest[0];
 }
@@ -205,6 +209,9 @@ function imgFallback(img){
     // Cards show the event's own flyer, else the venue's logo -- never a
     // made-up graphic. imgFallback() walks this chain on load errors.
     var venueImage = VENUES[e.venue] && VENUES[e.venue].image;
+    // focus = where the face is in the flyer (set by the updater), so the
+    // strip shows the face instead of the middle of the image.
+    var focusStyle = (e.focus && e.image) ? ' style="object-position:' + e.focus + '"' : '';
     var chain = [e.image, venueImage].filter(function(u, i, a){ return u && a.indexOf(u) === i; });
     var resaleLinks = (e.resale||[]).map(function(r){
       return '<a class="btn btn-resale" href="' + r.url + '" target="_blank" rel="noopener">' + r.site + '</a>';
@@ -212,7 +219,7 @@ function imgFallback(img){
     return (
       '<div class="card">' +
         '<div class="card-image">' +
-          (chain.length ? '<img src="' + chain[0] + '" alt="" loading="lazy" data-fallbacks="' + chain.slice(1).join("|") + '" onerror="imgFallback(this)">' : '') +
+          (chain.length ? '<img src="' + chain[0] + '" alt="" loading="lazy"' + focusStyle + ' data-fallbacks="' + chain.slice(1).join("|") + '" onerror="imgFallback(this)">' : '') +
           '<span class="genre-badge">' + (e.genre || "") + '</span>' +
         '</div>' +
         '<div class="card-body">' +

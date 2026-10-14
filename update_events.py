@@ -123,6 +123,13 @@ COBA_RECURRING_NAMES = ("ritual", "voltage")
 OG_FETCH_TIMEOUT = 20
 OG_FETCH_WORKERS = 8
 
+# Event cards are a short, wide strip, so tall flyers are cropped top and
+# bottom. detect_face_focus() finds faces in each event flyer and stores an
+# object-position ("x% y%") so the visible strip lands on the face. The image
+# itself is never modified -- only which part of it the card shows.
+FACE_IMAGE_MAX_BYTES = 15_000_000
+FACE_DETECT_MAX_SIDE = 900
+
 # StubHub resale inventory realistically only exists for shows happening soon --
 # searching for it on events 3+ months out mostly wastes budget on dead ends. This
 # caps the dedicated StubHub lookup pass (see run_stubhub_lookup()) to events within
@@ -476,6 +483,8 @@ def build_events_js(data: dict) -> str:
             f'genre: {js_str(e.get("genre"))}, direct: {js_str(e["direct"])}, '
             f'image: {js_str(e.get("image") or venue_images.get(venue_key))}'
         )
+        if e.get("focus") and e.get("image"):
+            obj += f', focus: {js_str(e["focus"])}'
         if e.get("recurring"):
             obj += f', recurring: {js_str(e["recurring"])}'
         resale_expr = f'resale({js_str(e["artist"])}, {js_str(venue_name)})'
@@ -574,6 +583,9 @@ def merge_with_previous(new_events, previous_events, today_str):
             e["image"] = prev["image"]
         if not e.get("stubhub") and prev.get("stubhub"):
             e["stubhub"] = prev["stubhub"]
+        if e.get("image") == prev.get("image") and prev.get("focus_src"):
+            e["focus"] = prev.get("focus")
+            e["focus_src"] = prev["focus_src"]
 
     merged = list(new_events)
     carried = [prev for key, prev in prev_by_key.items() if key not in new_by_key]
@@ -653,6 +665,74 @@ def venue_logo_images():
     return images
 
 
+def detect_face_focus(image_url):
+    """Return "x% y%" centred on the faces in an image, or None if there are
+    no faces (or OpenCV isn't installed / the image can't be loaded)."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return None
+    try:
+        req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=OG_FETCH_TIMEOUT) as resp:
+            raw = resp.read(FACE_IMAGE_MAX_BYTES)
+        img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_GRAYSCALE)
+    except Exception as exc:
+        print(f"Face check: could not load {image_url}: {exc}", file=sys.stderr)
+        return None
+    if img is None:
+        return None
+
+    h, w = img.shape[:2]
+    scale = min(1.0, FACE_DETECT_MAX_SIDE / max(h, w))
+    if scale < 1.0:
+        img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+        h, w = img.shape[:2]
+    img = cv2.equalizeHist(img)
+    min_side = max(24, int(min(h, w) * 0.06))
+
+    faces = []
+    for cascade_name in ("haarcascade_frontalface_default.xml", "haarcascade_profileface.xml"):
+        cascade = cv2.CascadeClassifier(os.path.join(cv2.data.haarcascades, cascade_name))
+        found = cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=6, minSize=(min_side, min_side))
+        faces = [tuple(int(v) for v in f) for f in found]
+        if faces:
+            break
+    if not faces:
+        return None
+
+    # Frame the main face(s): the largest one plus any others at least half its
+    # size (e.g. a b2b duo), ignoring tiny background faces / false positives.
+    largest = max(fw * fh for _, _, fw, fh in faces)
+    main = [f for f in faces if f[2] * f[3] >= largest / 2]
+    left = min(x for x, _, _, _ in main)
+    top = min(y for _, y, _, _ in main)
+    right = max(x + fw for x, _, fw, _ in main)
+    bottom = max(y + fh for _, y, _, fh in main)
+    cx = round(100 * (left + right) / 2 / w)
+    cy = round(100 * (top + bottom) / 2 / h)
+    return f"{cx}% {cy}%"
+
+
+def fill_face_focus(events, venue_images):
+    """Set each event's "focus" for its current flyer. Only re-checks events
+    whose image changed since the focus was computed (tracked in focus_src)."""
+    generic = set(venue_images.values())
+    todo = [
+        e for e in events
+        if e.get("image") and e["image"] not in generic and e.get("focus_src") != e["image"]
+    ]
+    if not todo:
+        return
+    with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+        results = list(pool.map(lambda e: detect_face_focus(e["image"]), todo))
+    for e, focus in zip(todo, results):
+        e["focus"] = focus
+        e["focus_src"] = e["image"]
+    print(f"Face check: found faces in {sum(1 for f in results if f)} of {len(todo)} new flyer(s).")
+
+
 def fill_event_images(events, venue_images):
     """Make sure each event shows its own flyer when its ticket page has one.
 
@@ -705,6 +785,7 @@ def main():
     data["events"] = combine_coba_recurring(data["events"])
     data["venue_images"] = venue_logo_images()
     fill_event_images(data["events"], data["venue_images"])
+    fill_face_focus(data["events"], data["venue_images"])
 
     cutoff_str = (date.today() + timedelta(days=STUBHUB_LOOKUP_WINDOW_DAYS)).isoformat()
     needs_lookup = [
