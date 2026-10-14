@@ -228,7 +228,8 @@ function imgFallback(img){
     // strip shows the face instead of the middle of the image.
     var focusStyle = (e.focus && e.image) ? ' style="object-position:' + e.focus + '"' : '';
     var chain = [e.image, venueImage].filter(function(u, i, a){ return u && a.indexOf(u) === i; });
-    var resaleLinks = (e.resale||[]).map(function(r){
+    // Recurring series only ever get the direct link -- no resale buttons.
+    var resaleLinks = (e.date ? (e.resale||[]) : []).map(function(r){
       return '<a class="btn btn-resale" href="' + r.url + '" target="_blank" rel="noopener">' + r.site + '</a>';
     }).join("");
     return (
