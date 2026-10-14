@@ -22,7 +22,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install anthropic
+        run: pip install anthropic "opencv-python-headless==4.10.0.84"
 
       - name: Run updater
         env:
