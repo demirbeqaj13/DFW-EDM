@@ -84,7 +84,8 @@
     text-transform:uppercase;letter-spacing:1px;
     margin:34px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);
   }
-  #eventsContainer > .month-header:first-child{margin-top:22px;}
+  /* Same space above the first section title as below it (its 8px padding-bottom). */
+  #eventsContainer > .month-header:first-child{margin-top:0;}
   .grid{
     display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
     gap:20px;
