@@ -59,11 +59,13 @@
   select.dropdown:hover{box-shadow:0 2px 8px rgba(236,72,153,0.18);}
   select.dropdown:focus{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,0.35);}
 
-  .hero{padding:40px 28px 16px;position:relative;overflow:hidden;}
+  .hero{padding:40px 28px 0;position:relative;overflow:hidden;max-width:1400px;margin:0 auto;}
   .subtitle{color:var(--sub);font-size:16px;margin:0;max-width:640px;}
+  .subtitle-mobile{display:none;}
   .month-tabs{
     display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;
-    margin:24px 0 0;font-size:14px;font-weight:700;
+    margin:24px 0 0;padding-bottom:14px;font-size:14px;font-weight:700;
+    border-bottom:1px solid rgba(255,255,255,0.07);
     text-transform:uppercase;letter-spacing:1px;
   }
   .month-tab{
@@ -82,6 +84,8 @@
     text-transform:uppercase;letter-spacing:1px;
     margin:34px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);
   }
+  /* Same space above the first section title as below it (its 8px padding-bottom). */
+  #eventsContainer > .month-header:first-child{margin-top:0;}
   .grid{
     display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
     gap:20px;
@@ -127,9 +131,18 @@
   footer{padding:24px 28px 40px;color:var(--muted);font-size:12px;text-align:center;}
 
   @media (max-width:640px){
-    header.nav{padding:14px 16px;flex-direction:column;align-items:stretch;}
-    .search-input{max-width:none;width:100%;}
-    select.dropdown{width:100%;min-width:0;}
+    /* Phones: description beside the logo, search + filters full width below. */
+    header.nav{
+      display:grid;grid-template-columns:auto minmax(0,1fr);
+      column-gap:14px;row-gap:8px;align-items:center;padding:14px 16px;
+    }
+    .logo{grid-column:1;margin:0;}
+    .subtitle-mobile{display:block;grid-column:2;font-size:14px;line-height:1.4;}
+    .subtitle-desktop{display:none;}
+    .search-input,select.dropdown{grid-column:1 / -1;width:100%;max-width:none;min-width:0;}
+    .search-input{margin-top:6px;}
+    .hero{padding-top:20px;}
+    .month-tabs{margin-top:0;}
   }
 </style>
 </head>
@@ -137,13 +150,14 @@
 
 <header class="nav">
   <a class="logo" href="/"><img src="logo.png" alt="DFW EDM"></a>
+  <p class="subtitle subtitle-mobile">Your home for Dallas-Fort Worth electronic music events, artists, and venues. All in one place.</p>
   <input type="text" class="search-input" id="searchInput" placeholder="Search artist or venue...">
   <select class="dropdown" id="venueSelect"><option value="">All Venues</option></select>
   <select class="dropdown" id="genreSelect"><option value="">All Genres</option></select>
 </header>
 
 <section class="hero">
-  <p class="subtitle">Your home for Dallas-Fort Worth electronic music events, artists, and venues. All in one place.</p>
+  <p class="subtitle subtitle-desktop">Your home for Dallas-Fort Worth electronic music events, artists, and venues. All in one place.</p>
   <nav class="month-tabs" id="monthTabs" aria-label="Jump to month"></nav>
 </section>
 
