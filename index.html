@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="impact-site-verification" value="542e9681-75be-44b8-a4c7-a84bc7050674">
 <title>DFW EDM &amp; House Events</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0a0a10;
@@ -35,37 +32,10 @@
     background:var(--bg2);flex-wrap:wrap;
   }
 
-  .glitch-text{
-    font-family:'Anton',sans-serif;
-    font-weight:400;
-    color:#fff;
-    position:relative;
-    display:inline-block;
-    transform:skewX(-8deg);
-    line-height:1;
-  }
-  .glitch-text::before,
-  .glitch-text::after{
-    content:attr(data-text);
-    position:absolute;
-    left:0;top:0;
-    width:100%;
-    z-index:-1;
-  }
-  .glitch-text::before{
-    color:#ff2f5b;
-    transform:translate(-0.05em,-0.04em);
-    mix-blend-mode:screen;
-  }
-  .glitch-text::after{
-    color:#1fd2ff;
-    transform:translate(0.05em,0.04em);
-    mix-blend-mode:screen;
-  }
-
-  .logo{
-    font-size:24px;letter-spacing:1px;
-    margin-right:auto;
+  .logo{margin-right:auto;display:block;line-height:0;}
+  .logo img{
+    width:56px;height:56px;display:block;
+    border-radius:50%;border:2px solid #fff;
   }
   .search-input{
     flex:1;min-width:180px;max-width:340px;
@@ -89,16 +59,7 @@
   select.dropdown:hover{box-shadow:0 2px 8px rgba(236,72,153,0.18);}
   select.dropdown:focus{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,0.35);}
 
-  .hero{padding:64px 28px 16px;position:relative;overflow:hidden;}
-  .hero-title{
-    font-size:64px;
-    margin:0 0 18px;
-    animation:flicker 5s infinite ease-in-out;
-  }
-  @keyframes flicker{
-    0%,19%,21%,23%,54%,56%,100%{opacity:1;}
-    20%,22%,55%{opacity:0.85;}
-  }
+  .hero{padding:40px 28px 16px;position:relative;overflow:hidden;}
   .subtitle{color:var(--sub);font-size:16px;margin:0;max-width:640px;}
 
   main{padding:8px 28px 60px;max-width:1400px;margin:0 auto;}
@@ -152,7 +113,6 @@
   footer{padding:24px 28px 40px;color:var(--muted);font-size:12px;text-align:center;}
 
   @media (max-width:640px){
-    .hero-title{font-size:38px;}
     header.nav{padding:14px 16px;flex-direction:column;align-items:stretch;}
     .search-input{max-width:none;width:100%;}
     select.dropdown{width:100%;min-width:0;}
@@ -162,15 +122,14 @@
 <body>
 
 <header class="nav">
-  <div class="logo glitch-text" data-text="DFW EDM">DFW EDM</div>
+  <a class="logo" href="/"><img src="logo.png" alt="DFW EDM"></a>
   <input type="text" class="search-input" id="searchInput" placeholder="Search artist or venue...">
   <select class="dropdown" id="venueSelect"><option value="">All Venues</option></select>
   <select class="dropdown" id="genreSelect"><option value="">All Genres</option></select>
 </header>
 
 <section class="hero">
-  <h1 class="hero-title glitch-text" data-text="DFW EDM Events">DFW EDM Events</h1>
-  <p class="subtitle">The pulse for Dallas-Fort Worth's electronic scene, all in one place. We'll get you in &mdash; one way or another.</p>
+  <p class="subtitle">Your home for Dallas-Fort Worth electronic music events, artists, and venues. All in one place.</p>
 </section>
 
 <main id="app">
