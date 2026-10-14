@@ -628,27 +628,94 @@ _OG_PATTERNS = [
 ]
 
 
-def fetch_og_image(url):
-    """Return the og:image (or twitter:image) URL of a page, or None."""
+# SeeTickets (SILO, Ductwork) ticket links end in a numeric event ID, and that
+# show's flyer is hosted under the same ID: wl.seetickets.us/event/RL-GRIME-DALLAS/702474
+# -> cdn.vor.us/event/702474/og/....png. Matching on the ID finds the right flyer
+# even when the page's og:image is a generic venue banner, and guarantees a
+# flyer never gets attached to the wrong show.
+SEETICKETS_EVENT_ID = re.compile(r"seetickets\.us/event/[^/?#]+/(\d+)", re.I)
+# Venue pages that list their SeeTickets shows with flyers, scanned as a
+# fallback when an individual ticket page can't be read.
+SEETICKETS_LISTING_PAGES = [
+    "https://silodallas.com/events",
+    "https://silodallas.com/",
+    "https://wl.seetickets.us/SILO",
+    "https://wl.seetickets.us/DiscoPresents-Ductwork",
+]
+
+
+def seetickets_event_id(url):
+    m = SEETICKETS_EVENT_ID.search(url or "")
+    return m.group(1) if m else None
+
+
+def vor_images_by_event_id(page):
+    """{seetickets event id: flyer url} for every cdn.vor.us event image on a page."""
+    found = {}
+    for m in re.finditer(r'https?:(?:\\?/){2}cdn\.vor\.us(?:\\?/)event(?:\\?/)(\d+)(?:\\?/)[^"\'\s<>]+', page):
+        url = html.unescape(m.group(0).replace("\\/", "/"))
+        while url.endswith(")") and url.count(")") > url.count("("):
+            url = url[:-1]
+        event_id = m.group(1)
+        # Prefer the og/share render of the flyer when a page has several sizes.
+        if event_id not in found or ("/og/" in url and "/og/" not in found[event_id]):
+            found[event_id] = url
+    return found
+
+
+def fetch_html(url):
+    """Return (html, final_url) for a page, or (None, None) on failure."""
     if not url:
-        return None
+        return None, None
     try:
         req = urllib.request.Request(url, headers={
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
                           "(KHTML, like Gecko) Chrome/126.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "en-US,en;q=0.9",
         })
         with urllib.request.urlopen(req, timeout=OG_FETCH_TIMEOUT) as resp:
-            page = resp.read(2_000_000).decode("utf-8", "replace")
-            final_url = resp.geturl()
+            return resp.read(3_000_000).decode("utf-8", "replace"), resp.geturl()
     except Exception as exc:
-        print(f"og:image fetch failed for {url}: {exc}", file=sys.stderr)
-        return None
+        print(f"Page fetch failed for {url}: {exc}", file=sys.stderr)
+        return None, None
+
+
+def og_image_from_html(page, final_url):
     for pattern in _OG_PATTERNS:
         m = pattern.search(page)
         if m:
             return urljoin(final_url, html.unescape(m.group(1).strip()))
     return None
+
+
+def fetch_og_image(url):
+    """Return the og:image (or twitter:image) URL of a page, or None."""
+    page, final_url = fetch_html(url)
+    return og_image_from_html(page, final_url) if page else None
+
+
+def find_event_flyer(e):
+    """Best flyer URL for one event from its own ticket page, or None."""
+    page, final_url = fetch_html(e.get("direct"))
+    event_id = seetickets_event_id(e.get("direct"))
+    if event_id:
+        if not page:
+            return None
+        return vor_images_by_event_id(page).get(event_id)
+    return og_image_from_html(page, final_url) if page else None
+
+
+def is_acceptable_flyer(e, img, generic):
+    """A flyer must not be a venue logo / generic banner, and a SeeTickets
+    image (cdn.vor.us) for a SeeTickets show must be under that show's own
+    event ID -- otherwise it's another show's flyer or a site banner."""
+    if not img or img in generic:
+        return False
+    event_id = seetickets_event_id(e.get("direct"))
+    if event_id and "cdn.vor.us" in img:
+        return f"/event/{event_id}/" in img
+    return True
 
 
 def venue_logo_images():
@@ -733,22 +800,23 @@ def fill_face_focus(events, venue_images):
     print(f"Face check: found faces in {sum(1 for f in results if f)} of {len(todo)} new flyer(s).")
 
 
-def fill_event_images(events, venue_images):
-    """Make sure each event shows its own flyer when its ticket page has one.
+def needs_flyer(e, generic):
+    return bool(e.get("date")) and not is_acceptable_flyer(e, e.get("image"), generic)
 
-    Any event whose image is missing or is just a venue logo gets its ticket
-    page's og:image instead -- unless that og:image is itself a venue logo or
-    the venue site's generic banner, in which case it's left for the venue
-    logo fallback. Recurring series are skipped (their card is the venue's)."""
+
+def fill_event_images(events, venue_images):
+    """Make sure each event shows its own flyer when one exists.
+
+    Events whose image is missing, a venue logo, or (for SeeTickets) not
+    under the show's own event ID are re-checked against their ticket page,
+    then against the venues' SeeTickets listing pages. Whatever is still
+    missing is returned for run_image_lookup(). Recurring series are skipped."""
     generic = set(venue_images.values())
-    todo = [
-        e for e in events
-        if e.get("date") and (not e.get("image") or e["image"] in generic)
-    ]
+    todo = [e for e in events if needs_flyer(e, generic)]
     if not todo:
-        return
+        return []
     with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
-        found = list(pool.map(lambda e: fetch_og_image(e.get("direct")), todo))
+        found = list(pool.map(find_event_flyer, todo))
     # The same image turning up for several different shows is a ticketing
     # site's generic banner, not a flyer.
     counts = {}
@@ -756,14 +824,93 @@ def fill_event_images(events, venue_images):
         if img:
             counts[img] = counts.get(img, 0) + 1
     generic |= {img for img, n in counts.items() if n >= 3}
-    filled = 0
+
+    listing = {}
+    if any(seetickets_event_id(e.get("direct")) for e, img in zip(todo, found) if not img):
+        with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+            for page, _ in pool.map(fetch_html, SEETICKETS_LISTING_PAGES):
+                if page:
+                    listing.update(vor_images_by_event_id(page))
+
+    filled, still_missing = 0, []
     for e, img in zip(todo, found):
-        if img and img not in generic:
+        if not is_acceptable_flyer(e, img, generic):
+            img = listing.get(seetickets_event_id(e.get("direct")) or "")
+        if is_acceptable_flyer(e, img, generic):
             e["image"] = img
             filled += 1
-        elif e.get("image") in generic:
+        else:
             e["image"] = None  # stored as null; build_events_js shows the venue logo
-    print(f"Filled {filled} of {len(todo)} event flyer(s) from ticket pages' og:image.")
+            still_missing.append(e)
+    print(f"Filled {filled} of {len(todo)} event flyer(s) from ticket and listing pages.")
+    return still_missing
+
+
+IMAGE_LOOKUP_SYSTEM_PROMPT = """You find the official promotional flyer image for specific
+events. For each numbered event, use web_fetch on its ticket URL (and the venue's own event page
+if needed) and return the URL of THAT event's flyer/artwork image, copied exactly from the fetched
+content -- never constructed or guessed. SeeTickets shows (wl.seetickets.us/event/<name>/<id>)
+host their flyer at https://cdn.vor.us/event/<id>/... using the same numeric <id>. Never return a
+venue logo, a generic site banner, or another event's image; use null if you can't find the real one.
+
+Your final message must contain ONLY a JSON object between <images_json> and </images_json>:
+<images_json>{"results": [{"i": 0, "image": "https://... or null"}]}</images_json>
+Keep it compact (no indentation)."""
+
+
+def run_image_lookup(client, events_missing):
+    """Dedicated pass, using the model's web_fetch (which can read ticket pages
+    that block plain scripted requests), for event flyers fill_event_images()
+    couldn't find. Returns {index: image url}; failures are non-fatal."""
+    if not events_missing:
+        return {}
+    listing = "\n".join(
+        f'{i}. "{e["artist"]}" at {VENUES.get(e["venue"], {}).get("name", e["venue"])}, {e.get("date")} -- {e.get("direct")}'
+        for i, e in enumerate(events_missing)
+    )
+    messages = [{"role": "user", "content": f"Find the flyer image for these {len(events_missing)} events:\n\n{listing}"}]
+    tools = [
+        {"type": "web_search_20250305", "name": "web_search", "max_uses": 20},
+        {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": min(80, len(events_missing) * 2 + 10), "max_content_tokens": 6000},
+    ]
+    accumulated_text = ""
+    for _ in range(10):
+        try:
+            response = client.messages.create(
+                model=MODEL,
+                max_tokens=MAX_TOKENS_PER_TURN,
+                system=IMAGE_LOOKUP_SYSTEM_PROMPT,
+                messages=messages,
+                tools=tools,
+                cache_control={"type": "ephemeral"},
+            )
+        except Exception as exc:
+            print(f"Image lookup pass hit an API error, skipping (non-fatal): {exc}", file=sys.stderr)
+            return {}
+        turn_text = "".join(b.text for b in response.content if getattr(b, "type", None) == "text")
+        if response.stop_reason == "pause_turn":
+            messages.append({"role": "assistant", "content": response.content})
+            continue
+        if response.stop_reason == "max_tokens":
+            accumulated_text += turn_text
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "user", "content": (
+                "Continue exactly where you left off without repeating anything, and still end "
+                "with the closing </images_json> tag once complete."
+            )})
+            continue
+        match = re.search(r"<images_json>(.*?)</images_json>", accumulated_text + turn_text, re.S)
+        if not match:
+            print("Image lookup pass did not return a parseable result, skipping (non-fatal).", file=sys.stderr)
+            return {}
+        try:
+            parsed = json.loads(match.group(1).strip())
+        except Exception as exc:
+            print(f"Image lookup pass returned invalid JSON, skipping (non-fatal): {exc}", file=sys.stderr)
+            return {}
+        return {r["i"]: r["image"] for r in parsed.get("results", []) if isinstance(r.get("i"), int) and r.get("image")}
+    print("Image lookup pass exceeded max turns, skipping (non-fatal).", file=sys.stderr)
+    return {}
 
 
 def main():
@@ -784,7 +931,16 @@ def main():
     data["events"] = merge_with_previous(data["events"], previous_events, today_str)
     data["events"] = combine_coba_recurring(data["events"])
     data["venue_images"] = venue_logo_images()
-    fill_event_images(data["events"], data["venue_images"])
+    missing = fill_event_images(data["events"], data["venue_images"])
+    if missing:
+        print(f"Running dedicated image lookup pass for {len(missing)} event(s) still missing a flyer...")
+        generic = set(data["venue_images"].values())
+        found = 0
+        for i, img in run_image_lookup(client, missing).items():
+            if 0 <= i < len(missing) and is_acceptable_flyer(missing[i], img, generic):
+                missing[i]["image"] = img
+                found += 1
+        print(f"Image lookup pass found {found} of {len(missing)} missing flyer(s).")
     fill_face_focus(data["events"], data["venue_images"])
 
     cutoff_str = (date.today() + timedelta(days=STUBHUB_LOOKUP_WINDOW_DAYS)).isoformat()
