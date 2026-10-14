@@ -92,6 +92,23 @@ VENUE_FALLBACK_IMAGES = {
     "coba": "https://static.wixstatic.com/media/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg/v1/fit/w_2500,h_1330,al_c/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg",
 }
 
+# Coba runs two weekly after-hours nights (Ritual Fridays, Voltage Saturdays)
+# that the site shows as ONE combined recurring card. Research runs and the
+# carry-forward in merge_with_previous() tend to re-add them as separate
+# cards, so combine_coba_recurring() drops any separate undated Ritual /
+# Voltage entries and always emits exactly this one in their place.
+COBA_RECURRING_EVENT = {
+    "artist": "Ritual Fridays / Voltage Saturdays",
+    "venue": "coba",
+    "date": None,
+    "time": "2:00 AM - 5:00 AM",
+    "genre": "House / Techno",
+    "direct": "https://www.cobadallas.com/buytickets",
+    "image": None,  # filled from VENUE_FALLBACK_IMAGES["coba"]
+    "recurring": "Every Friday & Saturday",
+}
+COBA_RECURRING_NAMES = ("ritual", "voltage")
+
 # Last-resort card image, served from this repo, for venues that don't have an
 # entry in VENUE_FALLBACK_IMAGES yet. Every card must show a real image -- the
 # site never falls back to a plain color gradient.
@@ -166,6 +183,9 @@ TASK:
    source is not a lower-confidence find -- add it the same as anything from the main site.
 6. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
    direct ticket purchase URL (the venue's own primary ticket link, not a resale site).
+6a. Coba's weekly after-hours nights (Ritual Fridays and Voltage Saturdays) are added by the script
+   as a single combined recurring card -- do not include them in "events". Specific dated Coba shows
+   (a named guest DJ on a particular night) should still be included as normal.
 7. For each event, try to find a promotional image: visit the individual ticket page and look for an
    og:image meta tag or the event's featured artwork. If you cannot find one, leave image as null --
    the script will apply a venue fallback image automatically.
@@ -565,6 +585,23 @@ def merge_with_previous(new_events, previous_events, today_str):
     return merged
 
 
+def combine_coba_recurring(events):
+    """Replace any separate undated Ritual Fridays / Voltage Saturdays cards
+    with the single combined COBA_RECURRING_EVENT card. Dated Coba shows (a
+    specific guest DJ on a given night) are left alone."""
+    def is_coba_weekly(e):
+        name = (e.get("artist") or "").lower()
+        return (
+            e.get("venue") == "coba"
+            and not e.get("date")
+            and any(n in name for n in COBA_RECURRING_NAMES)
+        )
+
+    kept = [e for e in events if not is_coba_weekly(e)]
+    kept.append(dict(COBA_RECURRING_EVENT))
+    return kept
+
+
 def main():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -581,6 +618,7 @@ def main():
     today_str = date.today().isoformat()
     previous_events = load_previous_events()
     data["events"] = merge_with_previous(data["events"], previous_events, today_str)
+    data["events"] = combine_coba_recurring(data["events"])
 
     cutoff_str = (date.today() + timedelta(days=STUBHUB_LOOKUP_WINDOW_DAYS)).isoformat()
     needs_lookup = [
