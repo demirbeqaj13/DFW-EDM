@@ -563,7 +563,11 @@ def build_events_js(data: dict) -> str:
         if e.get("recurring"):
             obj += f', recurring: {js_str(e["recurring"])}'
         resale_expr = f'resale({js_str(e["artist"])}, {js_str(venue_name)})'
-        if e.get("stubhub"):
+        if not e.get("date"):
+            # Recurring series (Haus Sundays, Ritual Fridays / Voltage
+            # Saturdays) only ever link to the venue directly -- no resale.
+            resale_expr = "[]"
+        elif e.get("stubhub"):
             resale_expr += f'.concat([{{ site: "StubHub", url: {js_str(e["stubhub"])} }}])'
         obj += f', resale: {resale_expr} }},'
         lines.append(obj)
