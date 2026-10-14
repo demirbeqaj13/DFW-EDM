@@ -249,9 +249,8 @@ function imgFallback(img){
     );
   }
 
-  // Month tabs: picking a month starts the list at that month (earlier
-  // months and the recurring section are hidden). "All" or clicking the
-  // active month again shows everything.
+  // Month tabs: picking a month shows only that month's events (no recurring
+  // section) until "All" or another month is picked.
   var startMonth = "";
   var monthTabs = document.getElementById("monthTabs");
   function renderMonthTabs(){
@@ -276,7 +275,8 @@ function imgFallback(img){
     var btn = ev.target.closest(".month-tab");
     if(!btn) return;
     var ym = btn.getAttribute("data-month");
-    startMonth = (ym === startMonth) ? "" : ym;
+    if(ym === startMonth) return;
+    startMonth = ym;
     renderMonthTabs();
     render();
   });
@@ -289,7 +289,7 @@ function imgFallback(img){
 
     var filtered = EVENTS.filter(function(e){
       if(e.date && e.date < todayKey) return false;
-      if(startMonth && (!e.date || e.date.slice(0, 7) < startMonth)) return false;
+      if(startMonth && (!e.date || e.date.slice(0, 7) !== startMonth)) return false;
       if(venueFilter && e.venue !== venueFilter) return false;
       if(genreFilter && e.genre !== genreFilter) return false;
       if(q){
