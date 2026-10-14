@@ -118,11 +118,15 @@
   }
   .card:hover{transform:translateY(-3px);border-color:#3a3a4c;}
   .card-image{
-    height:150px;background-size:cover;background-position:center;
-    position:relative;
+    height:150px;position:relative;overflow:hidden;background:#000;
+  }
+  .card-image img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;}
+  .card-image::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg, rgba(10,10,16,0.05), rgba(10,10,16,0.65));
   }
   .genre-badge{
-    position:absolute;top:10px;left:10px;
+    position:absolute;top:10px;left:10px;z-index:1;
     background:rgba(10,10,16,0.75);backdrop-filter:blur(4px);
     color:#fff;font-size:11px;font-weight:700;
     padding:4px 10px;border-radius:999px;
@@ -178,25 +182,14 @@
 
 <script src="events.js"></script>
 <script>
+var DEFAULT_IMAGE = "default-event.svg";
+function imgFallback(img){
+  var rest = (img.getAttribute("data-fallbacks") || "").split("|").filter(Boolean);
+  if(!rest.length){ img.onerror = null; return; }
+  img.setAttribute("data-fallbacks", rest.slice(1).join("|"));
+  img.src = rest[0];
+}
 (function(){
-  var GENRE_COLORS = [
-    {k:["house"],c:"var(--purple)"},
-    {k:["techno"],c:"var(--blue)"},
-    {k:["trance"],c:"var(--cyan)"},
-    {k:["bass","dubstep","trap"],c:"var(--orange)"},
-    {k:["drum"],c:"var(--green)"},
-    {k:["festival"],c:"var(--gold)"}
-  ];
-  function genreColor(genre){
-    if(!genre) return "var(--pink)";
-    var g = genre.toLowerCase();
-    for(var i=0;i<GENRE_COLORS.length;i++){
-      for(var j=0;j<GENRE_COLORS[i].k.length;j++){
-        if(g.indexOf(GENRE_COLORS[i].k[j])!==-1) return GENRE_COLORS[i].c;
-      }
-    }
-    return "var(--pink)";
-  }
   function fmtDate(d){
     if(!d) return "Recurring";
     var parts = d.split("-");
@@ -251,15 +244,17 @@
 
   function cardHTML(e){
     var venueName = VENUES[e.venue] ? VENUES[e.venue].name : e.venue;
-    var bg = e.image
-      ? "linear-gradient(180deg, rgba(10,10,16,0.05), rgba(10,10,16,0.65)), url('" + e.image + "')"
-      : "linear-gradient(135deg, " + genreColor(e.genre) + ", rgba(0,0,0,0.4))";
+    // Every card shows a real image: the event's flyer, else the venue's own
+    // graphic, else the site default. imgFallback() walks this chain on load errors.
+    var venueImage = VENUES[e.venue] && VENUES[e.venue].image;
+    var chain = [e.image, venueImage, DEFAULT_IMAGE].filter(function(u, i, a){ return u && a.indexOf(u) === i; });
     var resaleLinks = (e.resale||[]).map(function(r){
       return '<a class="btn btn-resale" href="' + r.url + '" target="_blank" rel="noopener">' + r.site + '</a>';
     }).join("");
     return (
       '<div class="card">' +
-        '<div class="card-image" style="background-image:' + bg + '">' +
+        '<div class="card-image">' +
+          '<img src="' + chain[0] + '" alt="" loading="lazy" data-fallbacks="' + chain.slice(1).join("|") + '" onerror="imgFallback(this)">' +
           '<span class="genre-badge">' + (e.genre || "") + '</span>' +
         '</div>' +
         '<div class="card-body">' +

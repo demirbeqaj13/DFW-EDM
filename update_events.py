@@ -87,7 +87,15 @@ VENUE_FALLBACK_IMAGES = {
     # event missing its own image, since a specific artist's flyer would go stale
     # or look misleading once reused for a different week/act.
     "ctrlroom": "https://cdn.prod.website-files.com/69c17a74a763699ce65b1b8d/69c24f01971e47d2420adc69_CTRL-OpenGraph.png",
+    # Coba's own pyramid graphic -- used for the recurring Ritual Fridays /
+    # Voltage Saturdays cards and any other Coba event missing its own flyer.
+    "coba": "https://static.wixstatic.com/media/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg/v1/fit/w_2500,h_1330,al_c/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg",
 }
+
+# Last-resort card image, served from this repo, for venues that don't have an
+# entry in VENUE_FALLBACK_IMAGES yet. Every card must show a real image -- the
+# site never falls back to a plain color gradient.
+DEFAULT_EVENT_IMAGE = "default-event.svg"
 
 # StubHub resale inventory realistically only exists for shows happening soon --
 # searching for it on events 3+ months out mostly wastes budget on dead ends. This
@@ -406,9 +414,7 @@ def build_events_js(data: dict) -> str:
 
     for e in events:
         if not e.get("image"):
-            fallback = VENUE_FALLBACK_IMAGES.get(e["venue"])
-            if fallback:
-                e["image"] = fallback
+            e["image"] = VENUE_FALLBACK_IMAGES.get(e["venue"], DEFAULT_EVENT_IMAGE)
 
     lines = []
     lines.append(f'const LAST_UPDATED = "{last_updated}";')
@@ -416,6 +422,8 @@ def build_events_js(data: dict) -> str:
     lines.append("const VENUES = {")
     for key, v in VENUES.items():
         parts = [f'name: {js_str(v["name"])}', f'address: {js_str(v["address"])}', f'site: {js_str(v["site"])}']
+        # Venue-level image the page swaps in if an event's own flyer fails to load.
+        parts.append(f'image: {js_str(VENUE_FALLBACK_IMAGES.get(key, DEFAULT_EVENT_IMAGE))}')
         if v.get("closed"):
             parts.append("closed: true")
         lines.append(f'  "{key}": {{ {", ".join(parts)} }},')
