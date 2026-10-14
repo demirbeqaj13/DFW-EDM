@@ -14,11 +14,15 @@ Run manually to test:
   ANTHROPIC_API_KEY=sk-ant-... python3 update_events.py
 """
 
+import html
 import json
 import os
 import re
 import sys
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
+from urllib.parse import urljoin
 
 import anthropic
 
@@ -109,10 +113,15 @@ COBA_RECURRING_EVENT = {
 }
 COBA_RECURRING_NAMES = ("ritual", "voltage")
 
-# Last-resort card image, served from this repo, for venues that don't have an
-# entry in VENUE_FALLBACK_IMAGES yet. Every card must show a real image -- the
-# site never falls back to a plain color gradient.
-DEFAULT_EVENT_IMAGE = "default-event.svg"
+# Card images must be real: the event's own promotional flyer, or failing that
+# the venue's own logo/brand graphic. Never a made-up or generic placeholder.
+# fill_event_images() pulls each event's flyer straight from its ticket page
+# (og:image) -- SILO / Ductwork (SeeTickets) and It'll Do (Eventbrite) publish
+# one for virtually every show -- and only uses the venue logo when the ticket
+# page genuinely has none. Venues missing from VENUE_FALLBACK_IMAGES get their
+# logo from their own website's og:image (see venue_logo_images()).
+OG_FETCH_TIMEOUT = 20
+OG_FETCH_WORKERS = 8
 
 # StubHub resale inventory realistically only exists for shows happening soon --
 # searching for it on events 3+ months out mostly wastes budget on dead ends. This
@@ -186,9 +195,10 @@ TASK:
 6a. Coba's weekly after-hours nights (Ritual Fridays and Voltage Saturdays) are added by the script
    as a single combined recurring card -- do not include them in "events". Specific dated Coba shows
    (a named guest DJ on a particular night) should still be included as normal.
-7. For each event, try to find a promotional image: visit the individual ticket page and look for an
-   og:image meta tag or the event's featured artwork. If you cannot find one, leave image as null --
-   the script will apply a venue fallback image automatically.
+7. For each event, find its promotional image: the event-specific flyer/artwork, normally the og:image
+   meta tag of the individual ticket page. Never use a venue logo, a generic site banner, or an image
+   from a different event. If you cannot find the event's own image, leave image as null -- the
+   script re-checks every ticket page itself and only then falls back to the venue's logo.
 8. If a venue currently has zero electronic/dance events on sale, simply don't include it in "events"
    -- there's no need to explain why or report on venues with nothing booked, just omit them.
 9. Do not guess or invent events, dates, or URLs. Every "direct" URL must be copied exactly from an
@@ -432,9 +442,7 @@ def build_events_js(data: dict) -> str:
     events = data["events"]
     last_updated = data.get("last_updated", date.today().isoformat())
 
-    for e in events:
-        if not e.get("image"):
-            e["image"] = VENUE_FALLBACK_IMAGES.get(e["venue"], DEFAULT_EVENT_IMAGE)
+    venue_images = data.get("venue_images", VENUE_FALLBACK_IMAGES)
 
     lines = []
     lines.append(f'const LAST_UPDATED = "{last_updated}";')
@@ -443,7 +451,7 @@ def build_events_js(data: dict) -> str:
     for key, v in VENUES.items():
         parts = [f'name: {js_str(v["name"])}', f'address: {js_str(v["address"])}', f'site: {js_str(v["site"])}']
         # Venue-level image the page swaps in if an event's own flyer fails to load.
-        parts.append(f'image: {js_str(VENUE_FALLBACK_IMAGES.get(key, DEFAULT_EVENT_IMAGE))}')
+        parts.append(f'image: {js_str(venue_images.get(key))}')
         if v.get("closed"):
             parts.append("closed: true")
         lines.append(f'  "{key}": {{ {", ".join(parts)} }},')
@@ -466,7 +474,7 @@ def build_events_js(data: dict) -> str:
             f'  {{ artist: {js_str(e["artist"])}, venue: {js_str(venue_key)}, '
             f'date: {js_str(e.get("date"))}, time: {js_str(e.get("time"))}, '
             f'genre: {js_str(e.get("genre"))}, direct: {js_str(e["direct"])}, '
-            f'image: {js_str(e.get("image"))}'
+            f'image: {js_str(e.get("image") or venue_images.get(venue_key))}'
         )
         if e.get("recurring"):
             obj += f', recurring: {js_str(e["recurring"])}'
@@ -602,6 +610,82 @@ def combine_coba_recurring(events):
     return kept
 
 
+_OG_PATTERNS = [
+    re.compile(r'<meta[^>]+(?:property|name)=["\'](?:og:image(?::secure_url)?|twitter:image)["\'][^>]*?content=["\']([^"\']+)["\']', re.I),
+    re.compile(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]*?(?:property|name)=["\'](?:og:image(?::secure_url)?|twitter:image)["\']', re.I),
+]
+
+
+def fetch_og_image(url):
+    """Return the og:image (or twitter:image) URL of a page, or None."""
+    if not url:
+        return None
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml",
+        })
+        with urllib.request.urlopen(req, timeout=OG_FETCH_TIMEOUT) as resp:
+            page = resp.read(2_000_000).decode("utf-8", "replace")
+            final_url = resp.geturl()
+    except Exception as exc:
+        print(f"og:image fetch failed for {url}: {exc}", file=sys.stderr)
+        return None
+    for pattern in _OG_PATTERNS:
+        m = pattern.search(page)
+        if m:
+            return urljoin(final_url, html.unescape(m.group(1).strip()))
+    return None
+
+
+def venue_logo_images():
+    """Venue key -> logo/brand image. Hardcoded VENUE_FALLBACK_IMAGES win;
+    any other open venue gets its own website's og:image."""
+    images = dict(VENUE_FALLBACK_IMAGES)
+    missing = [k for k, v in VENUES.items() if k not in images and v.get("site") and not v.get("closed")]
+    with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+        for key, img in zip(missing, pool.map(lambda k: fetch_og_image(VENUES[k]["site"]), missing)):
+            if img:
+                images[key] = img
+            else:
+                print(f"No logo image found for venue {key}", file=sys.stderr)
+    return images
+
+
+def fill_event_images(events, venue_images):
+    """Make sure each event shows its own flyer when its ticket page has one.
+
+    Any event whose image is missing or is just a venue logo gets its ticket
+    page's og:image instead -- unless that og:image is itself a venue logo or
+    the venue site's generic banner, in which case it's left for the venue
+    logo fallback. Recurring series are skipped (their card is the venue's)."""
+    generic = set(venue_images.values())
+    todo = [
+        e for e in events
+        if e.get("date") and (not e.get("image") or e["image"] in generic)
+    ]
+    if not todo:
+        return
+    with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+        found = list(pool.map(lambda e: fetch_og_image(e.get("direct")), todo))
+    # The same image turning up for several different shows is a ticketing
+    # site's generic banner, not a flyer.
+    counts = {}
+    for img in found:
+        if img:
+            counts[img] = counts.get(img, 0) + 1
+    generic |= {img for img, n in counts.items() if n >= 3}
+    filled = 0
+    for e, img in zip(todo, found):
+        if img and img not in generic:
+            e["image"] = img
+            filled += 1
+        elif e.get("image") in generic:
+            e["image"] = None  # stored as null; build_events_js shows the venue logo
+    print(f"Filled {filled} of {len(todo)} event flyer(s) from ticket pages' og:image.")
+
+
 def main():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -619,6 +703,8 @@ def main():
     previous_events = load_previous_events()
     data["events"] = merge_with_previous(data["events"], previous_events, today_str)
     data["events"] = combine_coba_recurring(data["events"])
+    data["venue_images"] = venue_logo_images()
+    fill_event_images(data["events"], data["venue_images"])
 
     cutoff_str = (date.today() + timedelta(days=STUBHUB_LOOKUP_WINDOW_DAYS)).isoformat()
     needs_lookup = [

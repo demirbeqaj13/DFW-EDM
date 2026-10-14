@@ -42,4 +42,4 @@ jobs:
           # fetch first" failures instead of just discovering them at push time.
           git fetch origin main
           git reset --soft origin/main
-          git diff --quiet -- events.js || (git add events.js && git commit -m "Automated events update" && git push origin main)
+          git diff --quiet -- events.js events_data.json || (git add events.js events_data.json && git commit -m "Automated events update" && git push origin main)
