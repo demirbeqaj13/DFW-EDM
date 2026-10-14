@@ -59,12 +59,13 @@
   select.dropdown:hover{box-shadow:0 2px 8px rgba(236,72,153,0.18);}
   select.dropdown:focus{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,0.35);}
 
-  .hero{padding:40px 28px 16px;position:relative;overflow:hidden;}
+  .hero{padding:40px 28px 0;position:relative;overflow:hidden;max-width:1400px;margin:0 auto;}
   .subtitle{color:var(--sub);font-size:16px;margin:0;max-width:640px;}
   .subtitle-mobile{display:none;}
   .month-tabs{
     display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;
-    margin:24px 0 0;font-size:14px;font-weight:700;
+    margin:24px 0 0;padding-bottom:14px;font-size:14px;font-weight:700;
+    border-bottom:1px solid rgba(255,255,255,0.07);
     text-transform:uppercase;letter-spacing:1px;
   }
   .month-tab{
@@ -83,6 +84,7 @@
     text-transform:uppercase;letter-spacing:1px;
     margin:34px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);
   }
+  #eventsContainer > .month-header:first-child{margin-top:22px;}
   .grid{
     display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
     gap:20px;
