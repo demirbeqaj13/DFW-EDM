@@ -137,6 +137,75 @@ FACE_DETECT_MAX_SIDE = 900
 # catching the vast majority of events that actually have real listings.
 STUBHUB_LOOKUP_WINDOW_DAYS = 30
 
+# Cost controls. Shows that were searched and had no StubHub listing / no
+# findable flyer aren't searched again for this many days (tracked per event
+# as stubhub_checked / image_checked in events_data.json), instead of being
+# re-searched on every 3-day run.
+STUBHUB_RECHECK_DAYS = 7
+IMAGE_LOOKUP_RECHECK_DAYS = 7
+
+# Thinking depth per pass. Research needs judgment (which acts count as
+# electronic, finding every venue's shows); the two lookup passes are simple
+# "find this link" jobs.
+RESEARCH_EFFORT = "medium"
+LOOKUP_EFFORT = "low"
+
+# Per-token prices for MODEL (USD per million tokens), only used to print an
+# estimated cost per run. Web searches are billed per search on top of this.
+PRICE_INPUT_PER_MTOK = 2.00
+PRICE_CACHE_WRITE_PER_MTOK = 2.50   # 1.25x input (5-minute cache)
+PRICE_CACHE_READ_PER_MTOK = 0.20    # 0.1x input
+PRICE_OUTPUT_PER_MTOK = 10.00
+
+# Running token / tool totals per pass, printed at the end of each run.
+USAGE = {}
+
+
+def tracked_create(pass_name, client, **kwargs):
+    """Create a message and add the response's usage to USAGE[pass_name]."""
+    response = client.messages.create(**kwargs)
+    u = response.usage
+    totals = USAGE.setdefault(pass_name, {
+        "requests": 0, "input": 0, "cache_write": 0, "cache_read": 0, "output": 0,
+        "web_searches": 0, "web_fetches": 0,
+    })
+    totals["requests"] += 1
+    totals["input"] += getattr(u, "input_tokens", 0) or 0
+    totals["cache_write"] += getattr(u, "cache_creation_input_tokens", 0) or 0
+    totals["cache_read"] += getattr(u, "cache_read_input_tokens", 0) or 0
+    totals["output"] += getattr(u, "output_tokens", 0) or 0
+    tools = getattr(u, "server_tool_use", None)
+    if tools:
+        totals["web_searches"] += getattr(tools, "web_search_requests", 0) or 0
+        totals["web_fetches"] += getattr(tools, "web_fetch_requests", 0) or 0
+    return response
+
+
+def print_usage_summary():
+    grand = 0.0
+    print("API usage this run (estimated token cost; web searches billed separately per search):")
+    for name, t in USAGE.items():
+        cost = (
+            t["input"] * PRICE_INPUT_PER_MTOK
+            + t["cache_write"] * PRICE_CACHE_WRITE_PER_MTOK
+            + t["cache_read"] * PRICE_CACHE_READ_PER_MTOK
+            + t["output"] * PRICE_OUTPUT_PER_MTOK
+        ) / 1_000_000
+        grand += cost
+        print(
+            f"  {name}: {t['requests']} request(s), input {t['input']:,}, cache write {t['cache_write']:,}, "
+            f"cache read {t['cache_read']:,}, output {t['output']:,} tokens, "
+            f"{t['web_searches']} web search(es), {t['web_fetches']} web fetch(es) -> ~${cost:.2f}"
+        )
+    print(f"  total: ~${grand:.2f} in tokens")
+
+
+def checked_recently(e, field, days, today_str):
+    last = e.get(field)
+    if not last:
+        return False
+    return last >= (date.fromisoformat(today_str) - timedelta(days=days)).isoformat()
+
 CLOSED_VENUES_NOTE = "Stereo Live Dallas closed permanently in early 2026 and is no longer booking shows. Kept here for reference only."
 
 SYSTEM_PROMPT = f"""You maintain the event data for edmdfw.com, a site tracking electronic/house/bass/techno
@@ -278,9 +347,12 @@ def run_research(client: anthropic.Anthropic) -> dict:
     accumulated_text = ""
 
     for _ in range(14):
-        response = client.messages.create(
+        response = tracked_create(
+            "research",
+            client,
             model=MODEL,
             max_tokens=MAX_TOKENS_PER_TURN,
+            output_config={"effort": RESEARCH_EFFORT},
             system=SYSTEM_PROMPT,
             messages=messages,
             tools=tools,
@@ -390,9 +462,12 @@ def run_stubhub_lookup(client: anthropic.Anthropic, events_needing_lookup: list)
 
     for _ in range(10):
         try:
-            response = client.messages.create(
+            response = tracked_create(
+                "stubhub_lookup",
+                client,
                 model=MODEL,
                 max_tokens=MAX_TOKENS_PER_TURN,
+                output_config={"effort": LOOKUP_EFFORT},
                 system=STUBHUB_SYSTEM_PROMPT,
                 messages=messages,
                 tools=tools,
@@ -400,7 +475,7 @@ def run_stubhub_lookup(client: anthropic.Anthropic, events_needing_lookup: list)
             )
         except Exception as exc:
             print(f"StubHub lookup pass hit an API error, skipping (non-fatal): {exc}", file=sys.stderr)
-            return {}
+            return None
 
         turn_text = "".join(
             block.text for block in response.content if getattr(block, "type", None) == "text"
@@ -427,16 +502,16 @@ def run_stubhub_lookup(client: anthropic.Anthropic, events_needing_lookup: list)
         match = re.search(r"<stubhub_json>(.*?)</stubhub_json>", final_text, re.S)
         if not match:
             print("StubHub lookup pass did not return a parseable result, skipping (non-fatal).", file=sys.stderr)
-            return {}
+            return None
         try:
             parsed = json.loads(match.group(1).strip())
         except Exception as exc:
             print(f"StubHub lookup pass returned invalid JSON, skipping (non-fatal): {exc}", file=sys.stderr)
-            return {}
+            return None
         return {r["i"]: r["stubhub"] for r in parsed.get("results", []) if r.get("stubhub")}
 
     print("StubHub lookup pass exceeded max turns, skipping (non-fatal).", file=sys.stderr)
-    return {}
+    return None
 
 
 def js_str(value):
@@ -583,6 +658,9 @@ def merge_with_previous(new_events, previous_events, today_str):
             e["image"] = prev["image"]
         if not e.get("stubhub") and prev.get("stubhub"):
             e["stubhub"] = prev["stubhub"]
+        for field in ("stubhub_checked", "image_checked"):
+            if not e.get(field) and prev.get(field):
+                e[field] = prev[field]
         if e.get("image") == prev.get("image") and prev.get("focus_src"):
             e["focus"] = prev.get("focus")
             e["focus_src"] = prev["focus_src"]
@@ -640,7 +718,7 @@ def dedupe_events(events, generic_images):
         if not match:
             kept.append(e)
             continue
-        for field in ("image", "stubhub", "focus", "focus_src"):
+        for field in ("image", "stubhub", "focus", "focus_src", "stubhub_checked", "image_checked"):
             if not match.get(field) and e.get(field):
                 match[field] = e[field]
         dropped.append(f'{e.get("artist")} (dup of {match.get("artist")}, {e.get("venue")} {e.get("date")})')
@@ -920,9 +998,12 @@ def run_image_lookup(client, events_missing):
     accumulated_text = ""
     for _ in range(10):
         try:
-            response = client.messages.create(
+            response = tracked_create(
+                "image_lookup",
+                client,
                 model=MODEL,
                 max_tokens=MAX_TOKENS_PER_TURN,
+                output_config={"effort": LOOKUP_EFFORT},
                 system=IMAGE_LOOKUP_SYSTEM_PROMPT,
                 messages=messages,
                 tools=tools,
@@ -930,7 +1011,7 @@ def run_image_lookup(client, events_missing):
             )
         except Exception as exc:
             print(f"Image lookup pass hit an API error, skipping (non-fatal): {exc}", file=sys.stderr)
-            return {}
+            return None
         turn_text = "".join(b.text for b in response.content if getattr(b, "type", None) == "text")
         if response.stop_reason == "pause_turn":
             messages.append({"role": "assistant", "content": response.content})
@@ -946,15 +1027,15 @@ def run_image_lookup(client, events_missing):
         match = re.search(r"<images_json>(.*?)</images_json>", accumulated_text + turn_text, re.S)
         if not match:
             print("Image lookup pass did not return a parseable result, skipping (non-fatal).", file=sys.stderr)
-            return {}
+            return None
         try:
             parsed = json.loads(match.group(1).strip())
         except Exception as exc:
             print(f"Image lookup pass returned invalid JSON, skipping (non-fatal): {exc}", file=sys.stderr)
-            return {}
+            return None
         return {r["i"]: r["image"] for r in parsed.get("results", []) if isinstance(r.get("i"), int) and r.get("image")}
     print("Image lookup pass exceeded max turns, skipping (non-fatal).", file=sys.stderr)
-    return {}
+    return None
 
 
 def main():
@@ -976,14 +1057,25 @@ def main():
     data["events"] = combine_coba_recurring(data["events"])
     data["venue_images"] = venue_logo_images()
     missing = fill_event_images(data["events"], data["venue_images"])
+    skipped = [e for e in missing if checked_recently(e, "image_checked", IMAGE_LOOKUP_RECHECK_DAYS, today_str)]
+    missing = [e for e in missing if not checked_recently(e, "image_checked", IMAGE_LOOKUP_RECHECK_DAYS, today_str)]
+    if skipped:
+        print(f"Skipping image lookup for {len(skipped)} event(s) already searched in the last {IMAGE_LOOKUP_RECHECK_DAYS} days.")
     if missing:
         print(f"Running dedicated image lookup pass for {len(missing)} event(s) still missing a flyer...")
         generic = set(data["venue_images"].values())
         found = 0
-        for i, img in run_image_lookup(client, missing).items():
+        results = run_image_lookup(client, missing)
+        if results is None:
+            results = {}
+            missing = []  # pass failed: don't mark these as checked
+        for i, img in results.items():
             if 0 <= i < len(missing) and is_acceptable_flyer(missing[i], img, generic):
                 missing[i]["image"] = img
                 found += 1
+        for e in missing:
+            if not e.get("image"):
+                e["image_checked"] = today_str
         print(f"Image lookup pass found {found} of {len(missing)} missing flyer(s).")
     fill_face_focus(data["events"], data["venue_images"])
     data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
@@ -992,16 +1084,29 @@ def main():
     needs_lookup = [
         e for e in data["events"]
         if not e.get("stubhub") and e.get("date") and today_str <= e["date"] <= cutoff_str
+        and not checked_recently(e, "stubhub_checked", STUBHUB_RECHECK_DAYS, today_str)
     ]
+    recently_checked = sum(
+        1 for e in data["events"]
+        if not e.get("stubhub") and checked_recently(e, "stubhub_checked", STUBHUB_RECHECK_DAYS, today_str)
+    )
+    if recently_checked:
+        print(f"Skipping StubHub lookup for {recently_checked} event(s) already searched in the last {STUBHUB_RECHECK_DAYS} days.")
     if needs_lookup:
         print(
             f"Running dedicated StubHub lookup pass for {len(needs_lookup)} event(s) within "
             f"{STUBHUB_LOOKUP_WINDOW_DAYS} days..."
         )
         results = run_stubhub_lookup(client, needs_lookup)
+        if results is None:
+            results = {}
+            needs_lookup = []  # pass failed: don't mark these as checked
         for i, url in results.items():
             if 0 <= i < len(needs_lookup):
                 needs_lookup[i]["stubhub"] = url
+        for e in needs_lookup:
+            if not e.get("stubhub"):
+                e["stubhub_checked"] = today_str
         found = sum(1 for e in needs_lookup if e.get("stubhub"))
         print(f"StubHub lookup pass found {found} link(s) out of {len(needs_lookup)} near-term event(s) checked.")
 
@@ -1018,6 +1123,7 @@ def main():
         )
 
     print(f"Wrote {len(data['events'])} events to {OUTPUT_PATH}")
+    print_usage_summary()
 
 
 if __name__ == "__main__":
