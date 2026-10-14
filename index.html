@@ -61,6 +61,19 @@
 
   .hero{padding:40px 28px 16px;position:relative;overflow:hidden;}
   .subtitle{color:var(--sub);font-size:16px;margin:0;max-width:640px;}
+  .month-tabs{
+    display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;
+    margin:24px 0 0;font-size:14px;font-weight:700;
+    text-transform:uppercase;letter-spacing:1px;
+  }
+  .month-tab{
+    background:none;border:none;color:var(--sub);cursor:pointer;
+    font:inherit;letter-spacing:inherit;text-transform:inherit;
+    padding:4px 2px;border-bottom:2px solid transparent;
+  }
+  .month-tab:hover{color:var(--text);}
+  .month-tab.active{color:var(--text);border-bottom-color:var(--pink);}
+  .month-sep{color:var(--muted);padding:0 12px;user-select:none;}
 
   main{padding:8px 28px 60px;max-width:1400px;margin:0 auto;}
   .month-header{
@@ -130,6 +143,7 @@
 
 <section class="hero">
   <p class="subtitle">Your home for Dallas-Fort Worth electronic music events, artists, and venues. All in one place.</p>
+  <nav class="month-tabs" id="monthTabs" aria-label="Jump to month"></nav>
 </section>
 
 <main id="app">
@@ -235,6 +249,38 @@ function imgFallback(img){
     );
   }
 
+  // Month tabs: picking a month starts the list at that month (earlier
+  // months and the recurring section are hidden). "All" or clicking the
+  // active month again shows everything.
+  var startMonth = "";
+  var monthTabs = document.getElementById("monthTabs");
+  function renderMonthTabs(){
+    var todayKey = todayStr();
+    var months = [];
+    EVENTS.forEach(function(e){
+      if(!e.date || e.date < todayKey) return;
+      var ym = e.date.slice(0, 7);
+      if(months.indexOf(ym) === -1) months.push(ym);
+    });
+    months.sort();
+    if(startMonth && months.indexOf(startMonth) === -1) startMonth = "";
+    var tabs = [{ym:"", label:"All"}].concat(months.map(function(ym){
+      var dt = new Date(Number(ym.slice(0,4)), Number(ym.slice(5,7))-1, 1);
+      return {ym:ym, label:dt.toLocaleDateString("en-US",{month:"short",year:"numeric"})};
+    }));
+    monthTabs.innerHTML = tabs.map(function(t){
+      return '<button type="button" class="month-tab' + (t.ym === startMonth ? ' active' : '') + '" data-month="' + t.ym + '">' + t.label + '</button>';
+    }).join('<span class="month-sep" aria-hidden="true">|</span>');
+  }
+  monthTabs.addEventListener("click", function(ev){
+    var btn = ev.target.closest(".month-tab");
+    if(!btn) return;
+    var ym = btn.getAttribute("data-month");
+    startMonth = (ym === startMonth) ? "" : ym;
+    renderMonthTabs();
+    render();
+  });
+
   function render(){
     var venueFilter = venueSelect.value;
     var genreFilter = genreSelect.value;
@@ -243,6 +289,7 @@ function imgFallback(img){
 
     var filtered = EVENTS.filter(function(e){
       if(e.date && e.date < todayKey) return false;
+      if(startMonth && (!e.date || e.date.slice(0, 7) < startMonth)) return false;
       if(venueFilter && e.venue !== venueFilter) return false;
       if(genreFilter && e.genre !== genreFilter) return false;
       if(q){
@@ -285,6 +332,7 @@ function imgFallback(img){
   genreSelect.addEventListener("change", render);
   searchInput.addEventListener("input", render);
 
+  renderMonthTabs();
   render();
 })();
 </script>
