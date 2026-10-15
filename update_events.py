@@ -143,7 +143,7 @@ STUBHUB_LOOKUP_WINDOW_DAYS = 30
 # filter instead of dozens of one-off subgenre strings.
 MAIN_GENRES = [
     "House", "Techno", "Trance", "Drum & Bass", "Dubstep", "Bass",
-    "UK Bass / Garage", "Downtempo", "Hard Dance",
+    "UK Bass / Garage", "Downtempo", "Hard Dance", "Trap",
 ]
 
 # (pattern, main genre), checked in order against each part of a raw label
@@ -159,7 +159,8 @@ _GENRE_RULES = [
     (r"downtempo|chill|lo-?fi|ambient|trip ?hop", "Downtempo"),
     (r"techno", "Techno"),
     (r"house|disco|funk|big ?room|electro(?!nic|-? ?pop)|eurodance|guarachero|latin", "House"),
-    (r"bass|trap|phonk|moombah|future|wave|midtempo|glitch", "Bass"),
+    (r"trap|phonk", "Trap"),
+    (r"bass|moombah|future|wave|midtempo|glitch", "Bass"),
 ]
 
 
@@ -276,7 +277,7 @@ TASK:
    of including them with an accurate genre label rather than skipping them.
 3a. GENRE LABEL -- "genre" must be exactly ONE of: {", ".join(MAIN_GENRES)}. Pick the act's main
    style (tech house, afro house, disco, big room -> House; melodic/hard techno -> Techno; riddim ->
-   Dubstep; trap, future bass, melodic bass -> Bass; hardstyle, hardcore -> Hard Dance; jungle ->
+   Dubstep; trap, phonk -> Trap; future bass, melodic bass -> Bass; hardstyle, hardcore -> Hard Dance; jungle ->
    Drum & Bass; UK garage, bassline, grime -> UK Bass / Garage; chill / ambient -> Downtempo).
 4. HIGH-RISK VENUES -- {", ".join(VENUES[k]["name"] for k in HIGH_RISK_MIXED_GENRE_VENUES)}: these are
    large arenas/amphitheaters that book mostly non-electronic acts (country, rock, family shows,
