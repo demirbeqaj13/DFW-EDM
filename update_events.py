@@ -138,6 +138,40 @@ FACE_DETECT_MAX_SIDE = 900
 # catching the vast majority of events that actually have real listings.
 STUBHUB_LOOKUP_WINDOW_DAYS = 30
 
+# The only genre labels the site shows. Every event is filed under exactly
+# one of these (see main_genre()), so visitors get a short, consistent genre
+# filter instead of dozens of one-off subgenre strings.
+MAIN_GENRES = [
+    "House", "Techno", "Trance", "Drum & Bass", "Dubstep", "Bass",
+    "UK Bass / Garage", "Downtempo", "Hard Dance",
+]
+
+# (pattern, main genre), checked in order against each part of a raw label
+# like "Melodic Dubstep/Future Bass". The first part that matches decides, so
+# the act's leading genre wins; parts that are just "Electronic", "EDM",
+# "Dance", "DJ Set" etc. match nothing and are skipped.
+_GENRE_RULES = [
+    (r"hard ?style|hard ?dance|hardcore|gabber|frenchcore|uptempo", "Hard Dance"),
+    (r"drum ?(&|and|n'?) ?bass|\bdnb\b|\bd&b\b|jungle|liquid", "Drum & Bass"),
+    (r"uk ?garage|\bukg\b|garage|2-?step|uk ?bass|grime|bassline", "UK Bass / Garage"),
+    (r"trance", "Trance"),
+    (r"dubstep|riddim|brostep|tearout", "Dubstep"),
+    (r"downtempo|chill|lo-?fi|ambient|trip ?hop", "Downtempo"),
+    (r"techno", "Techno"),
+    (r"house|disco|funk|big ?room|electro(?!nic|-? ?pop)|eurodance|guarachero|latin", "House"),
+    (r"bass|trap|phonk|moombah|future|wave|midtempo|glitch", "Bass"),
+]
+
+
+def main_genre(raw):
+    """Map any genre label to one of MAIN_GENRES (defaults to House)."""
+    for part in re.split(r"[/,|()]", (raw or "").lower()):
+        for pattern, genre in _GENRE_RULES:
+            if re.search(pattern, part):
+                return genre
+    return "House"
+
+
 # Cost controls. Shows that were searched and had no StubHub listing / no
 # findable flyer aren't searched again for this many days (tracked per event
 # as stubhub_checked / image_checked in events_data.json), instead of being
@@ -240,6 +274,10 @@ TASK:
    crossover, hyperpop-adjacent electronic acts, and DJ sets generally. When in doubt because an act
    straddles electronic and another genre (e.g. an "electropop" or "pop-EDM" artist), err on the side
    of including them with an accurate genre label rather than skipping them.
+3a. GENRE LABEL -- "genre" must be exactly ONE of: {", ".join(MAIN_GENRES)}. Pick the act's main
+   style (tech house, afro house, disco, big room -> House; melodic/hard techno -> Techno; riddim ->
+   Dubstep; trap, future bass, melodic bass -> Bass; hardstyle, hardcore -> Hard Dance; jungle ->
+   Drum & Bass; UK garage, bassline, grime -> UK Bass / Garage; chill / ambient -> Downtempo).
 4. HIGH-RISK VENUES -- {", ".join(VENUES[k]["name"] for k in HIGH_RISK_MIXED_GENRE_VENUES)}: these are
    large arenas/amphitheaters that book mostly non-electronic acts (country, rock, family shows,
    comedy, sports), which makes it easy to skim past the one big EDM headliner buried in a long
@@ -311,7 +349,7 @@ tag or after the closing tag. Structure:
       "venue": "one of the venue keys above",
       "date": "YYYY-MM-DD or null for recurring/undated series",
       "time": "string, e.g. '9:00 PM'",
-      "genre": "short string, e.g. 'House' or 'Techno' or 'Bass / Trap'",
+      "genre": "exactly one of the main genres listed above, e.g. 'House' or 'Techno'",
       "direct": "https://... direct ticket URL",
       "image": "https://... or null",
       "stubhub": "https://www.stubhub.com/.../event/<id>/ real verified listing URL, or null if not found",
@@ -1092,6 +1130,8 @@ def main():
         print(f"Image lookup pass found {found} of {len(missing)} missing flyer(s).")
     fill_face_focus(data["events"], data["venue_images"])
     data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
+    for e in data["events"]:
+        e["genre"] = main_genre(e.get("genre"))
 
     cutoff_str = (date.today() + timedelta(days=STUBHUB_LOOKUP_WINDOW_DAYS)).isoformat()
     needs_lookup = [

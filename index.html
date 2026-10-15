@@ -223,11 +223,12 @@ function imgFallback(img){
       venueSelect.appendChild(opt);
     });
 
-  var genres = [];
-  EVENTS.forEach(function(e){
-    if(e.genre && genres.indexOf(e.genre) === -1) genres.push(e.genre);
-  });
-  genres.sort().forEach(function(g){
+  // The site's main genres, alphabetical; only those with at least one event are listed.
+  var MAIN_GENRES = ["Bass", "Downtempo", "Drum & Bass", "Dubstep", "Hard Dance",
+                     "House", "Techno", "Trance", "UK Bass / Garage"];
+  MAIN_GENRES.filter(function(g){
+    return EVENTS.some(function(e){ return e.genre === g; });
+  }).forEach(function(g){
     var opt = document.createElement("option");
     opt.value = g; opt.textContent = g;
     genreSelect.appendChild(opt);
