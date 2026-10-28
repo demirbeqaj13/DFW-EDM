@@ -171,9 +171,6 @@
   .no-results{color:var(--sub);padding:36px 0;text-align:center;}
 
   footer.wrap{border-top:1px solid var(--border);margin-top:40px;padding-top:28px;padding-bottom:40px;}
-  .submit{font-family:var(--head);font-weight:600;font-size:17px;margin:0 0 6px;}
-  .submit a{color:var(--pink);}
-  .submit a:hover{text-decoration:underline;}
   .fine{font-size:12.5px;color:var(--tertiary);margin:6px 0 0;}
 </style>
 </head>
@@ -195,7 +192,6 @@
   <nav class="menu-panel" id="menuPanel" hidden aria-label="Site">
     <a href="#upcoming">Upcoming shows</a>
     <a href="#every-week">Every week</a>
-    <a href="#submit" id="menuSubmit">Submit an event</a>
   </nav>
 </header>
 
@@ -230,8 +226,7 @@
   </section>
 </main>
 
-<footer class="wrap" id="submit">
-  <p class="submit">Know a show we're missing? <a id="submitLink" href="#">Submit an event &rarr;</a></p>
+<footer class="wrap">
   <p class="fine">Refreshed every few days &middot; last updated <span id="lastUpdated"></span></p>
   <p class="fine" id="closedNote"></p>
 </footer>
@@ -249,9 +244,6 @@ function imgFallback(img){
   img.src = rest[0];
 }
 (function(){
-  // Where "Submit an event" goes. Set this to a form or mailto: link.
-  var SUBMIT_EVENT_URL = "";
-
   // The site's main genres (alphabetical) and their pill colors.
   var GENRE_COLORS = {
     "Bass": "#FB923C", "Downtempo": "#CBD5E1", "Drum & Bass": "#A3E635",
@@ -325,10 +317,6 @@ function imgFallback(img){
 
   document.getElementById("lastUpdated").textContent = typeof LAST_UPDATED !== "undefined" ? LAST_UPDATED : "";
   document.getElementById("closedNote").textContent = typeof CLOSED_VENUES_NOTE !== "undefined" ? CLOSED_VENUES_NOTE : "";
-  if(SUBMIT_EVENT_URL){
-    document.getElementById("submitLink").href = SUBMIT_EVENT_URL;
-    document.getElementById("menuSubmit").href = SUBMIT_EVENT_URL;
-  }
 
   // Menu
   var menuBtn = document.getElementById("menuBtn"), menuPanel = document.getElementById("menuPanel");
