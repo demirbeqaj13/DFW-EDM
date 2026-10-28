@@ -36,19 +36,19 @@
 
   /* Header */
   .site-header{border-bottom:1px solid var(--border);position:relative;}
-  .site-header .wrap{display:flex;align-items:center;gap:12px;height:64px;}
+  .site-header .wrap{display:flex;align-items:center;gap:12px;min-height:64px;padding-top:10px;padding-bottom:10px;}
   .brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
   .brand img{width:40px;height:40px;border-radius:50%;border:2px solid #fff;flex:none;display:block;}
   .brand-text{min-width:0;}
   .wordmark{font-family:var(--head);font-weight:700;font-size:18px;letter-spacing:.5px;line-height:1.1;}
-  .tagline{display:block;font-size:12.5px;color:var(--tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tagline{display:block;font-size:12.5px;line-height:1.35;color:var(--tertiary);}
   .menu-btn{
     width:44px;height:44px;flex:none;display:grid;place-items:center;cursor:pointer;
     background:var(--field);border:1px solid var(--border);border-radius:12px;
   }
   .menu-btn svg{width:20px;height:20px;}
   .menu-panel{
-    position:absolute;right:16px;top:60px;z-index:30;min-width:220px;
+    position:absolute;right:16px;top:calc(100% - 4px);z-index:30;min-width:220px;
     background:var(--surface);border:1px solid var(--border);border-radius:14px;
     padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);
   }
@@ -179,7 +179,7 @@
       <img src="logo.png" alt="">
       <span class="brand-text">
         <span class="wordmark">DFW EDM</span>
-        <span class="tagline">Dallas&ndash;Fort Worth electronic music</span>
+        <span class="tagline">Your home for <span style="white-space:nowrap">Dallas-Fort Worth</span> electronic music.</span>
       </span>
     </a>
     <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menuPanel">
