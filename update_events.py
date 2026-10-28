@@ -147,7 +147,21 @@ PORTAL_RECURRING_EVENT = {
     "recurring": "Every Friday & Saturday",
 }
 
+# CTRL Room's weekly Sunday house night, shown with CTRL's "C" logo
+# (squared and centered on the C, stored in the repo).
+HAUS_SUNDAYS_EVENT = {
+    "artist": "Haus Sundays",
+    "venue": "ctrlroom",
+    "date": None,
+    "time": "10:00 PM",
+    "genre": "House",
+    "direct": "https://www.ctrlroomdallas.com/events",
+    "image": "img/ctrl-room.png",
+    "recurring": "Weekly on Sundays",
+}
+
 FIXED_WEEKLY_SERIES = [
+    (HAUS_SUNDAYS_EVENT, ("haus sundays",)),
     (COBA_RECURRING_EVENT, COBA_RECURRING_NAMES),
     (PORTAL_RECURRING_EVENT, ("portal",)),
 ]
@@ -438,7 +452,7 @@ tag or after the closing tag. Structure:
     {{
       "artist": "string",
       "venue": "one of the venue keys above",
-      "date": "YYYY-MM-DD; null ONLY for a series that runs every week, with \"recurring\" set",
+      "date": "YYYY-MM-DD the show starts (a 1 AM Saturday start is Saturday; the script files it under Friday night); null ONLY for a series that runs every week, with \"recurring\" set",
       "time": "string, e.g. '9:00 PM'",
       "genre": "exactly one of the main genres listed above, e.g. 'House' or 'Techno'",
       "direct": "https://... direct ticket URL",
@@ -868,6 +882,56 @@ def _name_words(artist):
     return frozenset(w for w in words if w not in _BILLING_WORDS)
 
 
+# A show starting between midnight and this hour belongs to the night before
+# (Saturday 1 AM is Friday night).
+LATE_NIGHT_CUTOFF_HOUR = 6
+_START_TIME = re.compile(r"(\d{1,2})(?::\d{2})?\s*([AP])\.?M", re.I)
+_NIGHT_LABEL = re.compile(r"(?<![\d.])(\d{1,2})[./](\d{1,2})(?![\d])")
+
+
+def start_hour(time_str):
+    m = _START_TIME.search(time_str or "")
+    if not m:
+        return None
+    hour = int(m.group(1)) % 12
+    return hour + 12 if m.group(2).upper() == "P" else hour
+
+
+def file_late_shows_under_night_before(events):
+    """After-hours shows (start 12-6 AM) are listed under the night they
+    belong to. Research dates them inconsistently -- a ticket titled
+    "CRESPO at Coba 10.30" is dated the 30th, while the venue's calendar has
+    the same 1 AM start on the 31st -- which showed every such night twice.
+    If the title or link already names the night (10.30), that date is
+    used; otherwise the start date moves back one day."""
+    moved = 0
+    for e in events:
+        if not e.get("date"):
+            continue
+        hour = start_hour(e.get("time"))
+        if hour is None or hour >= LATE_NIGHT_CUTOFF_HOUR:
+            continue
+        d = date.fromisoformat(e["date"])
+        night = d - timedelta(days=1)
+        labels = {
+            (int(m.group(1)), int(m.group(2)))
+            for m in _NIGHT_LABEL.finditer(f'{e.get("artist", "")} {e.get("direct", "")}')
+        }
+        if (d.month, d.day) in labels:
+            continue  # already dated by its night
+        e["date"] = night.isoformat()
+        moved += 1
+    if moved:
+        print(f"Filed {moved} after-midnight show(s) under the night before.")
+    return events
+
+
+def _is_index_url(url):
+    """A venue's generic events / news / tickets page rather than one show's page."""
+    path = re.sub(r"^https?://[^/]+", "", _ticket_id(url))
+    return path in ("", "/") or bool(re.search(r"/(events?|shows|calendar|buytickets|tickets|blogs/news|pages/events-tickets)$", path))
+
+
 def dedupe_events(events, generic_images):
     """Drop duplicate listings of the same show, keeping the first one (this
     run's research comes before carried-forward events) and filling any
@@ -882,6 +946,13 @@ def dedupe_events(events, generic_images):
         for field in ("image", "stubhub", "focus", "focus_src", "stubhub_checked", "image_checked"):
             if not match.get(field) and e.get(field):
                 match[field] = e[field]
+        # Prefer the copy that links to the show's own page over a venue's
+        # generic events page.
+        if _is_index_url(match.get("direct")) and e.get("direct") and not _is_index_url(e.get("direct")):
+            match["direct"] = e["direct"]
+            if e.get("image") and e["image"] not in generic_images:
+                match["image"] = e["image"]
+                match["focus"], match["focus_src"] = e.get("focus"), e.get("focus_src")
         dropped.append(f'{e.get("artist")} (dup of {match.get("artist")}, {e.get("venue")} {e.get("date")})')
     if dropped:
         print(f"Removed {len(dropped)} duplicate listing(s): " + "; ".join(dropped))
@@ -1073,6 +1144,7 @@ def fill_face_focus(events, venue_images):
     todo = [
         e for e in events
         if e.get("image") and e["image"] not in generic and e.get("focus_src") != e["image"]
+        and e["image"].startswith("http")  # images stored in the repo are already framed
     ]
     if not todo:
         return
@@ -1299,6 +1371,7 @@ def main():
     data["events"] = merge_with_previous(data["events"], previous_events, today_str)
     data["events"] = combine_fixed_weekly(data["events"])
     data["events"] = drop_undated_non_weekly(data["events"])
+    data["events"] = file_late_shows_under_night_before(data["events"])
     data["venue_images"] = venue_logo_images()
     missing = fill_event_images(data["events"], data["venue_images"])
     skipped = [e for e in missing if checked_recently(e, "image_checked", IMAGE_LOOKUP_RECHECK_DAYS, today_str)]
