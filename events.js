@@ -19,6 +19,7 @@ const VENUES = {
   "villagebeach": { name: "The Village Beach Club", address: "5670 Village Glen Dr, Dallas, TX 75206", site: "https://villagebeachclub.com/event-calendar/", image: null },
   "shyboy": { name: "Shyboy Hi-Fi", address: "1313 Main St, Dallas, TX 75202", site: "https://shyboyhifi.com/", image: "https://framerusercontent.com/images/XMFOUqT27uD43nsH5BldXfbUA.png" },
   "clubdedior": { name: "Club De Dior", address: "3650 N Buckner Blvd, Dallas, TX", site: "https://www.instagram.com/portalafterhours/", image: "img/portal-after-hours.jpg" },
+  "rubyroom": { name: "Ruby Room", address: "2625 Floyd St, Dallas, TX", site: "https://www.instagram.com/sunset_sessionsdtx/", image: "img/sunset-sessions.jpg" },
 };
 
 function resale(artist, venueCity) {
@@ -155,6 +156,7 @@ const EVENTS = [
   { artist: "Haus Sundays", venue: "ctrlroom", date: null, time: "10:00 PM", genre: "House", direct: "https://www.ctrlroomdallas.com/events", image: "img/ctrl-room.png", recurring: "Weekly on Sundays", resale: [] },
   { artist: "Ritual Fridays / Voltage Saturdays", venue: "coba", date: null, time: "2:00 AM - 5:00 AM", genre: "House", direct: "https://www.cobadallas.com/buytickets", image: "https://static.wixstatic.com/media/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg/v1/fit/w_2500,h_1330,al_c/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg", recurring: "Every Friday & Saturday", resale: [] },
   { artist: "Portal After Hours", venue: "clubdedior", date: null, time: "1:30 AM - 5:00 AM", genre: "House", direct: "https://www.instagram.com/portalafterhours/", image: "img/portal-after-hours.jpg", recurring: "Every Friday & Saturday", resale: [] },
+  { artist: "Sunset Sessions", venue: "rubyroom", date: null, time: "4:00 PM - 2:00 AM", genre: "House", direct: "https://www.instagram.com/sunset_sessionsdtx/", image: "img/sunset-sessions.jpg", recurring: "Every Sunday", resale: [] },
 ];
 
 const CLOSED_VENUES_NOTE = "Stereo Live Dallas closed permanently in early 2026 and is no longer booking shows. Kept here for reference only.";
