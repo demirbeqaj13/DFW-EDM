@@ -178,6 +178,15 @@ GENRE_OVERRIDES = {
     "hex cougar": "Trap",
     "josh baker": "House",
     "level up - the ritual": "Dubstep",
+    # Full review (Oct 2026), judged on each act's current sound.
+    "ayybo": "House",            # bass house
+    "riordan": "UK Bass / Garage",
+    "omnom": "House",            # bass house
+    "awen": "House",             # afro / melodic house
+    "maddix": "Techno",          # hard techno
+    "crankdat": "Dubstep",
+    "layz": "Dubstep",
+    "riot w/": "Dubstep",        # RIOT w/ SPAG, HEKLER
 }
 
 
@@ -308,8 +317,8 @@ TASK:
    older hits, the venue's category tag, or a generic word like "Electronic", "EDM", "Dance" or
    "Pop" (never answer with one of those). Search the artist if you aren't sure. Pick the act's main
    style (tech house, afro house, disco, big room -> House; melodic/hard techno -> Techno; riddim ->
-   Dubstep; trap, phonk -> Trap; future bass, melodic bass -> Bass; hardstyle, hardcore -> Hard Dance; jungle ->
-   Drum & Bass; UK garage, bassline, grime -> UK Bass / Garage; chill / ambient -> Downtempo).
+   Dubstep; trap, phonk -> Trap; bass house -> House; future bass, melodic bass -> Bass; hardstyle, hardcore -> Hard Dance; jungle ->
+   Drum & Bass; UK garage, speed garage, bassline, grime -> UK Bass / Garage; chill / ambient -> Downtempo).
 4. HIGH-RISK VENUES -- {", ".join(VENUES[k]["name"] for k in HIGH_RISK_MIXED_GENRE_VENUES)}: these are
    large arenas/amphitheaters that book mostly non-electronic acts (country, rock, family shows,
    comedy, sports), which makes it easy to skim past the one big EDM headliner buried in a long
@@ -792,7 +801,19 @@ def are_duplicate_events(a, b, generic_images):
     name_a = re.sub(r"[^a-z0-9]", "", (a.get("artist") or "").lower())
     name_b = re.sub(r"[^a-z0-9]", "", (b.get("artist") or "").lower())
     short, long_ = sorted((name_a, name_b), key=len)
-    return len(short) >= 4 and short in long_
+    if len(short) >= 4 and short in long_:
+        return True
+    # Same acts billed in a different order ("Ben Nicky + Vini Vici" vs
+    # "Vini Vici + Ben Nicky").
+    return len(_name_words(a.get("artist"))) >= 2 and _name_words(a.get("artist")) == _name_words(b.get("artist"))
+
+
+_BILLING_WORDS = {"x", "b2b", "and", "w", "with", "feat", "ft", "presents", "vs"}
+
+
+def _name_words(artist):
+    words = re.findall(r"[a-z0-9]+", (artist or "").lower())
+    return frozenset(w for w in words if w not in _BILLING_WORDS)
 
 
 def dedupe_events(events, generic_images):
