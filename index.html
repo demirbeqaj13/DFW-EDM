@@ -167,9 +167,18 @@
   .carousel::-webkit-scrollbar{display:none;}
   /* Weekly cards use the event-card layout (flyer left, details right),
      with a square flyer since promo images are mostly square. */
-  .wk{flex:none;width:min(340px, 86vw);scroll-snap-align:start;}
+  .wk{flex:none;width:min(380px, 90vw);scroll-snap-align:start;}
   .thumb.square{width:104px;height:104px;align-self:flex-start;}
   .wk-when{font-weight:600;font-size:11.5px;letter-spacing:.6px;color:var(--pink);text-transform:uppercase;}
+  /* One line per detail; fitLines() shrinks a line's text only if it would overflow. */
+  .wk .fit{white-space:nowrap;overflow:hidden;}
+  /* Button right under the details instead of pinned to the card bottom. */
+  .wk .actions{margin-top:0;padding-top:10px;}
+  /* Wide screens: the weekly cards share the row instead of scrolling. */
+  @media (min-width:1100px){
+    .wk{flex:1 1 0;width:auto;min-width:0;}
+    .wk .thumb.square{width:96px;height:96px;}
+  }
 
   .no-results{color:var(--sub);padding:36px 0;text-align:center;}
 
@@ -296,6 +305,18 @@ function imgFallback(img){
   }
   // Undated events only show (in "Every week") if they say which day(s) they run.
   function isWeekly(e){ return WEEKDAYS.some(function(d){ return new RegExp(d, "i").test(e.recurring || ""); }); }
+  // Shrink single-line text (".fit") just enough to show it in full, never
+  // below 10px. Re-run when fonts load or the window is resized.
+  function fitLines(root){
+    root.querySelectorAll(".fit").forEach(function(el){
+      el.style.fontSize = "";
+      var size = parseFloat(getComputedStyle(el).fontSize);
+      while(el.scrollWidth > el.clientWidth + 0.5 && size > 10){
+        size -= 0.5;
+        el.style.fontSize = size + "px";
+      }
+    });
+  }
   function venueName(e){ return VENUES[e.venue] ? VENUES[e.venue].name : e.venue; }
   function imgTag(e, extraClass){
     // Cards show the event's own flyer, else the venue's logo -- never a
@@ -465,9 +486,9 @@ function imgFallback(img){
         '<div class="thumb square">' + imgTag(e) + '</div>' +
         '<div class="ev-body">' +
           '<div class="tags">' + genrePill(e.genre) + '</div>' +
-          '<div class="ev-title">' + esc(e.artist) + '</div>' +
-          '<div class="wk-when">' + esc(weeklyDays(e)) + (e.time ? ' &middot; ' + esc(shortTime(e.time)) : '') + '</div>' +
-          '<div class="meta">' + esc(venueName(e)) + '</div>' +
+          '<div class="ev-title fit">' + esc(e.artist) + '</div>' +
+          '<div class="wk-when fit">' + esc(weeklyDays(e)) + (e.time ? ' &middot; ' + esc(shortTime(e.time)) : '') + '</div>' +
+          '<div class="meta fit">' + esc(venueName(e)) + '</div>' +
           '<div class="actions"><a class="btn-tickets" href="' + esc(e.direct) + '" target="_blank" rel="noopener">Event Info</a></div>' +
         '</div>' +
       '</article>'
@@ -529,6 +550,7 @@ function imgFallback(img){
     var weekly = (startMonth || range) ? [] : EVENTS.filter(function(e){ return !e.date && isWeekly(e) && matchesCommon(e, q); });
     weeklySection.hidden = !weekly.length;
     weeklyContainer.innerHTML = weekly.map(weeklyHTML).join("");
+    fitLines(weeklyContainer);
     clearBtn.disabled = !(q || whenFilter || genreSelect.value || venueSelect.value || startMonth);
   }
 
@@ -554,6 +576,8 @@ function imgFallback(img){
 
   renderMonthTabs();
   render();
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ fitLines(weeklyContainer); });
+  window.addEventListener("resize", function(){ fitLines(weeklyContainer); });
 })();
 </script>
 
