@@ -431,7 +431,8 @@ function imgFallback(img){
     if(e.free){
       actions = '<a class="info-link" href="' + esc(e.direct) + '" target="_blank" rel="noopener">Event info &rarr;</a>';
     } else {
-      var resale = (e.resale || []).map(function(r){
+      // Venues flagged noResale (e.g. Sounders) only ever get the direct link.
+      var resale = (VENUES[e.venue] && VENUES[e.venue].noResale ? [] : (e.resale || [])).map(function(r){
         return '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.site) + '</a>';
       }).join(" &middot; ");
       actions = '<a class="btn-tickets" href="' + esc(e.direct) + '" target="_blank" rel="noopener">Tickets</a>' +
