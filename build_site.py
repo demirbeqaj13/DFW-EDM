@@ -11,8 +11,10 @@ venues, dates and cities are in the page source, plus schema.org Event data:
   * venues/<venue>/     -- "silo dallas events", ...
   * sitemap.xml and robots.txt.
 
-The homepage (index.html) is never modified; it's only read for its CSS so
-the pages match the site. The card / day-group markup below mirrors
+On the homepage (index.html) only the <head> block between <!--seo:head-->
+markers is rewritten (search title, description, link-preview tags and
+schema.org Event data); nothing the page displays or runs is touched. The
+landing pages reuse its CSS so they match the site. The card / day-group markup below mirrors
 cardHTML(), weeklyHTML() and render() in index.html.
 
 Run:  python3 build_site.py
@@ -337,6 +339,34 @@ def head_tags(title, description, path, events, venues, extra_ld=None):
     )
 
 
+# ---------------------------------------------------------------- homepage <head>
+
+HOME_TITLE = "Dallas EDM Shows, DFW House & Techno Events | DFW EDM"
+
+
+def home_description(venues, dated):
+    counts = {}
+    for e in dated:
+        counts[e["venue"]] = counts.get(e["venue"], 0) + 1
+    top = [venues[k]["name"] for k, _ in sorted(counts.items(), key=lambda kv: -kv[1])[:4] if k in venues]
+    return ("Every EDM, house, techno, dubstep and bass show in Dallas-Fort Worth: tonight, this weekend "
+            f"and every month{' at ' + ', '.join(top) + ' and more' if top else ''}. Tickets and free events.")
+
+
+def replace_block(page, name, content):
+    pat = re.compile(rf"(<!--{re.escape(name)}-->).*?(<!--/{re.escape(name)}-->)", re.S)
+    if not pat.search(page):
+        raise SystemExit(f"index.html is missing the <!--{name}--> ... <!--/{name}--> markers")
+    return pat.sub(lambda m: m.group(1) + content + m.group(2), page, count=1)
+
+
+def build_home_head(page, data, today):
+    """Only the homepage's <head> SEO block changes -- never its body."""
+    dated = upcoming(data["EVENTS"], today)
+    return replace_block(page, "seo:head", "\n" + head_tags(
+        HOME_TITLE, home_description(data["VENUES"], dated), "/", dated, data["VENUES"]) + "\n")
+
+
 # ---------------------------------------------------------------- landing pages
 
 def site_css(page):
@@ -548,7 +578,12 @@ def main():
     data = load_data()
     today = today_str()
     with open(os.path.join(ROOT, "index.html"), encoding="utf-8") as f:
-        page = f.read()  # read only, for the site's CSS -- never written
+        original = f.read()
+    page = build_home_head(original, data, today)
+    body = lambda p: p[p.index("</head>"):]
+    assert body(page) == body(original), "build must never change the homepage body"
+    if page != original:
+        write("index.html", page)
 
     pages = build_landing_pages(page, data, today)
     keep = {rel for rel, _ in pages}
@@ -565,7 +600,7 @@ def main():
                     f"<changefreq>daily</changefreq></url>\n" for u in urls)
           + "</urlset>\n")
     write("robots.txt", f"User-agent: *\nAllow: /\n\nSitemap: {SITE}/sitemap.xml\n")
-    print(f"Built {len(pages)} landing page(s), sitemap with {len(urls)} URL(s).")
+    print(f"Updated the homepage <head>; built {len(pages)} landing page(s), sitemap with {len(urls)} URL(s).")
 
 
 if __name__ == "__main__":

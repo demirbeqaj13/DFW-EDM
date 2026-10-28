@@ -1,8 +1,9 @@
 name: Build static pages
 
-# Rebuilds the SEO landing pages and sitemap (build_site.py, no API calls)
-# so dates stay current between event updates: "this weekend", "tonight",
-# and past shows dropping off. The homepage is never modified.
+# Rebuilds the SEO landing pages, sitemap and the homepage's <head> SEO
+# block (build_site.py, no API calls) so dates stay current between event
+# updates: "this weekend", "tonight", and past shows dropping off. The
+# homepage body is never touched.
 on:
   schedule:
     # Daily at 10:17 UTC (~5am Central)
@@ -42,9 +43,9 @@ jobs:
         run: |
           git config user.name "edmdfw-bot"
           git config user.email "actions@github.com"
-          git add sitemap.xml robots.txt dallas-edm-events this-weekend genres venues
+          git add index.html sitemap.xml robots.txt dallas-edm-events this-weekend genres venues
           # The sitemap's lastmod changes daily; only commit when a page did.
-          if git diff --cached --quiet -- dallas-edm-events this-weekend genres venues robots.txt; then
+          if git diff --cached --quiet -- index.html dallas-edm-events this-weekend genres venues robots.txt; then
             echo "No page changes"; exit 0
           fi
           git commit -m "Rebuild static pages"
