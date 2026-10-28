@@ -8,7 +8,7 @@
 <title>DFW EDM &amp; House Events</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0A0A10;
@@ -22,12 +22,16 @@
     --purple:#8B5CF6;
     --on-pink:#14060D;  /* dark text on pink keeps 4.5:1+ */
     --green:#22C55E;
-    --head:"Space Grotesk",system-ui,sans-serif;
-    --body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    /* One typeface everywhere: Inter Tight (Inter with tighter spacing). */
+    --font:"Inter Tight","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   *{box-sizing:border-box;}
   html{-webkit-text-size-adjust:100%;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.45;}
+  body{
+    margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.45;
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
+  }
+  h1,h2,h3,.wordmark,.ev-title,.wk-title,.section-title{letter-spacing:-0.005em;}
   a{color:inherit;text-decoration:none;}
   button,input,select{font:inherit;color:inherit;}
   :focus-visible{outline:2px solid var(--pink);outline-offset:2px;}
@@ -40,13 +44,13 @@
   .brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
   .brand img{width:40px;height:40px;border-radius:50%;border:2px solid #fff;flex:none;display:block;}
   .brand-text{min-width:0;flex:1;container-type:inline-size;}
-  .wordmark{font-family:var(--head);font-weight:700;font-size:18px;letter-spacing:.5px;line-height:1.1;}
+  .wordmark{font-weight:700;font-size:18px;line-height:1.1;}
   /* One line at any width: the size scales with the space beside the logo
-     (the text is ~24x as wide as its font size), capped at 12.5px. */
+     (in Inter Tight the text is ~21.3x as wide as its font size), capped at 12.5px. */
   .tagline{
     display:block;color:var(--tertiary);line-height:1.35;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    font-size:12.5px;font-size:min(12.5px, 100cqi / 25);
+    font-size:12.5px;font-size:min(12.5px, 100cqi / 22.5);
   }
   .menu-btn{
     width:44px;height:44px;flex:none;display:grid;place-items:center;cursor:pointer;
@@ -82,7 +86,7 @@
     position:relative;flex:none;display:inline-flex;align-items:center;gap:4px;
     height:36px;padding:0 14px;border-radius:999px;cursor:pointer;white-space:nowrap;
     background:var(--field);border:1px solid var(--border);color:var(--sub);
-    font-family:var(--head);font-weight:500;font-size:14px;
+    font-weight:500;font-size:14px;
   }
   .chip:hover{border-color:#3A3A4A;color:var(--text);}
   .chip.active{background:var(--pink);border-color:var(--pink);color:var(--on-pink);font-weight:600;}
@@ -98,7 +102,7 @@
   .months-row::-webkit-scrollbar{display:none;}
   .month{
     flex:none;background:none;border:0;cursor:pointer;padding:14px 0 11px;
-    font-family:var(--head);font-weight:600;font-size:13px;letter-spacing:1.2px;
+    font-weight:600;font-size:13px;letter-spacing:.6px;
     color:var(--tertiary);border-bottom:2px solid transparent;
   }
   .month:hover{color:var(--text);}
@@ -107,7 +111,7 @@
   /* Event list */
   main{padding-bottom:24px;}
   .month-head{
-    font-family:var(--head);font-weight:600;font-size:12px;letter-spacing:1.4px;
+    font-weight:600;font-size:12px;letter-spacing:.8px;
     text-transform:uppercase;color:var(--tertiary);margin:26px 0 0;
   }
   .empty{color:var(--sub);font-size:14px;margin:10px 0 0;}
@@ -115,8 +119,8 @@
     display:flex;align-items:baseline;justify-content:space-between;gap:12px;
     margin:22px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border);
   }
-  .day-head h3{margin:0;font-family:var(--head);font-weight:700;font-size:18px;}
-  .day-count{font-family:var(--head);font-weight:500;font-size:11.5px;letter-spacing:1.1px;color:var(--tertiary);white-space:nowrap;}
+  .day-head h3{margin:0;font-weight:700;font-size:18px;}
+  .day-count{font-weight:500;font-size:11.5px;letter-spacing:.6px;color:var(--tertiary);white-space:nowrap;}
   .day-count .soon{color:var(--pink);}
   .cards{display:grid;grid-template-columns:1fr;gap:10px;}
   @media (min-width:760px){ .cards{grid-template-columns:1fr 1fr;} }
@@ -131,29 +135,29 @@
   .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
   .pill{
     display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;
-    font-family:var(--head);font-weight:600;font-size:11px;letter-spacing:.4px;
+    font-weight:600;font-size:11px;letter-spacing:.2px;
     color:var(--c);background:color-mix(in srgb, var(--c) 14%, transparent);
     border:1px solid color-mix(in srgb, var(--c) 32%, transparent);
   }
-  .pill.free{--c:var(--green);letter-spacing:1px;}
-  .ev-title{font-family:var(--head);font-weight:700;font-size:16.5px;line-height:1.2;overflow-wrap:anywhere;}
+  .pill.free{--c:var(--green);letter-spacing:.6px;}
+  .ev-title{font-weight:700;font-size:16.5px;line-height:1.2;overflow-wrap:anywhere;}
   .lineup{font-size:13px;color:var(--sub);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
   .meta{font-size:13.5px;color:var(--sub);}
   .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:auto;padding-top:8px;}
   .btn-tickets{
     display:inline-flex;align-items:center;height:34px;padding:0 16px;border-radius:10px;
-    background:var(--pink);color:var(--on-pink);font-family:var(--head);font-weight:700;font-size:14px;
+    background:var(--pink);color:var(--on-pink);font-weight:700;font-size:14px;
   }
   .btn-tickets:hover{filter:brightness(1.08);}
   .resale{font-size:12.5px;color:var(--tertiary);}
   .resale a{text-decoration:underline;text-underline-offset:2px;text-decoration-color:#4A4A5A;}
   .resale a:hover{color:var(--text);}
-  .info-link{font-family:var(--head);font-weight:600;font-size:14px;color:var(--green);}
+  .info-link{font-weight:600;font-size:14px;color:var(--green);}
   .info-link:hover{text-decoration:underline;}
 
   /* Every week carousel */
   .weekly{margin-top:34px;}
-  .section-title{font-family:var(--head);font-weight:700;font-size:20px;margin:0 0 12px;}
+  .section-title{font-weight:700;font-size:20px;margin:0 0 12px;}
   .carousel{display:flex;gap:10px;overflow-x:auto;padding:0 16px 4px;margin:0 -16px;scroll-snap-type:x mandatory;scroll-padding-inline:16px;scrollbar-width:none;}
   .carousel::-webkit-scrollbar{display:none;}
   .wk{
@@ -164,8 +168,8 @@
   .wk-img{height:84px;background:#000;}
   .wk-img img{width:100%;height:100%;object-fit:cover;display:block;}
   .wk-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;}
-  .wk-when{font-family:var(--head);font-weight:600;font-size:11.5px;letter-spacing:1.1px;color:var(--pink);}
-  .wk-title{font-family:var(--head);font-weight:700;font-size:15px;line-height:1.2;}
+  .wk-when{font-weight:600;font-size:11.5px;letter-spacing:.6px;color:var(--pink);}
+  .wk-title{font-weight:700;font-size:15px;line-height:1.2;}
   .wk-venue{font-size:13px;color:var(--sub);}
 
   .no-results{color:var(--sub);padding:36px 0;text-align:center;}
@@ -204,7 +208,6 @@
   <div class="chips" role="group" aria-label="Filters">
     <button type="button" class="chip" data-when="tonight" aria-pressed="false">Tonight</button>
     <button type="button" class="chip" data-when="weekend" aria-pressed="false">This weekend</button>
-    <button type="button" class="chip" id="freeChip" aria-pressed="false">Free</button>
     <label class="chip" id="genreChip"><span id="genreLabel">Genre</span> &#9662;
       <select id="genreSelect" aria-label="Genre"><option value="">All genres</option></select>
     </label>
@@ -348,17 +351,14 @@ function imgFallback(img){
     document.getElementById(labelId).textContent = on ? select.options[select.selectedIndex].text : fallback;
   }
 
-  // Tonight / This weekend (one at a time) and Free
+  // Tonight / This weekend (one at a time)
   var whenFilter = "";
-  var freeOnly = false;
   var whenChips = document.querySelectorAll(".chip[data-when]");
-  var freeChip = document.getElementById("freeChip");
   function syncToggleChips(){
     whenChips.forEach(function(c){
       var on = c.getAttribute("data-when") === whenFilter;
       c.classList.toggle("active", on); c.setAttribute("aria-pressed", String(on));
     });
-    freeChip.classList.toggle("active", freeOnly); freeChip.setAttribute("aria-pressed", String(freeOnly));
   }
   whenChips.forEach(function(c){
     c.addEventListener("click", function(){
@@ -367,7 +367,6 @@ function imgFallback(img){
       syncToggleChips(); render();
     });
   });
-  freeChip.addEventListener("click", function(){ freeOnly = !freeOnly; syncToggleChips(); render(); });
 
   // Month row: picking a month shows only that month's events until "All" or
   // another month is picked. Every month from first to last is listed, so the
@@ -487,7 +486,6 @@ function imgFallback(img){
       if(!e.date || e.date < todayKey) return false;
       if(startMonth && e.date.slice(0, 7) !== startMonth) return false;
       if(range && (e.date < range[0] || e.date > range[1])) return false;
-      if(freeOnly && !e.free) return false;
       return matchesCommon(e, q);
     }).sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
 
@@ -519,8 +517,8 @@ function imgFallback(img){
     }
     eventsContainer.innerHTML = html;
 
-    // Every week: hidden while a specific month or date/free filter is on.
-    var weekly = (startMonth || range || freeOnly) ? [] : EVENTS.filter(function(e){ return !e.date && matchesCommon(e, q); });
+    // Every week: hidden while a specific month or date filter is on.
+    var weekly = (startMonth || range) ? [] : EVENTS.filter(function(e){ return !e.date && matchesCommon(e, q); });
     weeklySection.hidden = !weekly.length;
     weeklyContainer.innerHTML = weekly.map(weeklyHTML).join("");
   }
