@@ -2,19 +2,18 @@
 """
 Static build for edmdfw.com (no API calls; safe to run any time).
 
-Reads events.js (the data the homepage loads) and writes:
-  * index.html -- the current listings pre-rendered between <!--prerender:*-->
-    markers, plus SEO <head> tags and schema.org Event data between
-    <!--seo:head--> markers. The page's own JavaScript still re-renders the
-    list on load, so search and filters work exactly as before; the pre-built
-    copy just means artist names, venues, dates and cities are in the HTML
-    source for search engines (and show before scripts run).
-  * this-weekend/, genres/<genre>/, venues/<venue>/ -- landing pages for
-    searches like "edm events this weekend dallas" or "dfw house music".
+Reads events.js (the data the homepage loads) and writes search-engine
+landing pages whose listings are pre-built into the HTML -- artist names,
+venues, dates and cities are in the page source, plus schema.org Event data:
+  * dallas-edm-events/ -- the full calendar ("dallas edm shows")
+  * this-weekend/       -- "edm events this weekend dallas"
+  * genres/<genre>/     -- "dfw house music", "dallas techno", ...
+  * venues/<venue>/     -- "silo dallas events", ...
   * sitemap.xml and robots.txt.
 
-The card / day-group markup below mirrors cardHTML(), weeklyHTML() and
-render() in index.html; keep them in sync when either changes.
+The homepage (index.html) is never modified; it's only read for its CSS so
+the pages match the site. The card / day-group markup below mirrors
+cardHTML(), weeklyHTML() and render() in index.html.
 
 Run:  python3 build_site.py
 """
@@ -207,11 +206,6 @@ def month_long(ym):
     return date(int(ym[:4]), int(ym[5:7]), 1).strftime("%B %Y")
 
 
-def month_short(ym):
-    label = date(int(ym[:4]), int(ym[5:7]), 1).strftime("%b").upper()
-    return label + " ’" + ym[2:4] if int(ym[:4]) != now_ct().year else label
-
-
 def day_label(d):
     dt = parse_date(d)
     return f"{dt:%a}, {dt:%b} {dt.day}"
@@ -247,15 +241,6 @@ def list_html(dated, venues, today, base="", fill_months=True):
                 f'<div class="cards">{"".join(card_html(e, venues, base) for e in by_day[d])}</div>'
             )
     return "".join(out)
-
-
-def month_tabs_html(dated):
-    months = sorted(set(e["date"][:7] for e in dated))
-    if months:
-        months = month_range(months[0], months[-1])
-    tabs = ['<button type="button" class="month active" data-month="" aria-current="true">ALL</button>']
-    tabs += [f'<button type="button" class="month" data-month="{ym}">{month_short(ym)}</button>' for ym in months]
-    return "".join(tabs)
 
 
 # ---------------------------------------------------------------- structured data
@@ -350,41 +335,6 @@ def head_tags(title, description, path, events, venues, extra_ld=None):
         f'<meta name="twitter:description" content="{esc(description)}">\n'
         f'<script type="application/ld+json">{ld_json({"@context": "https://schema.org", "@graph": graph})}</script>'
     )
-
-
-# ---------------------------------------------------------------- homepage
-
-HOME_TITLE = "DFW EDM Events – Dallas EDM Shows, House & Techno This Weekend"
-
-
-def home_description(venues, dated):
-    counts = {}
-    for e in dated:
-        counts[e["venue"]] = counts.get(e["venue"], 0) + 1
-    top = [venues[k]["name"] for k, _ in sorted(counts.items(), key=lambda kv: -kv[1])[:4] if k in venues]
-    return ("Every EDM, house, techno, dubstep and bass show in Dallas-Fort Worth: tonight, this weekend "
-            f"and every month at {', '.join(top)} and more. Tickets and free events.")
-
-
-def replace_block(page, name, content):
-    pat = re.compile(rf"(<!--{re.escape(name)}-->).*?(<!--/{re.escape(name)}-->)", re.S)
-    if not pat.search(page):
-        raise SystemExit(f"index.html is missing the <!--{name}--> ... <!--/{name}--> markers")
-    return pat.sub(lambda m: m.group(1) + content + m.group(2), page, count=1)
-
-
-def build_home(page, data, today):
-    venues, events = data["VENUES"], data["EVENTS"]
-    dated = upcoming(events, today)
-    weekly = [e for e in events if not e.get("date") and is_weekly(e)]
-    page = replace_block(page, "seo:head", "\n" + head_tags(
-        HOME_TITLE, home_description(venues, dated), "/", dated, venues) + "\n")
-    page = replace_block(page, "prerender:months", month_tabs_html(dated))
-    page = replace_block(page, "prerender:weekly", "".join(weekly_html(e, venues) for e in weekly))
-    page = replace_block(page, "prerender:events", list_html(dated, venues, today))
-    page = replace_block(page, "prerender:updated", esc(data.get("LAST_UPDATED") or ""))
-    page = replace_block(page, "prerender:closed", esc(data.get("CLOSED_VENUES_NOTE") or ""))
-    return page
 
 
 # ---------------------------------------------------------------- landing pages
@@ -504,11 +454,29 @@ def build_landing_pages(page, data, today):
     venue_keys = sorted((k for k in venue_counts if k in venues and not venues[k].get("closed")),
                         key=lambda k: (-venue_counts[k], venues[k]["name"]))
     nav = [
-        ("This weekend", [("/this-weekend/", "EDM events this weekend")]),
+        ("Calendar", [("/dallas-edm-events/", "All Dallas EDM shows"), ("/this-weekend/", "EDM events this weekend")]),
         ("Genres", [(f"/genres/{slugify(g)}/", f"DFW {g}") for g in genres]),
         ("Venues", [(f"/venues/{slugify(venues[k]['name'])}/", venues[k]["name"]) for k in venue_keys]),
     ]
     pages = []
+
+    # Full calendar
+    counts = {}
+    for e in dated:
+        counts[e["venue"]] = counts.get(e["venue"], 0) + 1
+    top = [venues[k]["name"] for k, _ in sorted(counts.items(), key=lambda kv: -kv[1])[:4] if k in venues]
+    months = list(dict.fromkeys(e["date"][:7] for e in dated))
+    period = f"{month_long(months[0])} – {month_long(months[-1])}" if len(months) > 1 else (month_long(months[0]) if months else "")
+    pages.append(("dallas-edm-events/index.html", landing_page(
+        page, path="/dallas-edm-events/",
+        title="Dallas EDM Shows & Events – DFW House, Techno & Bass Calendar | DFW EDM",
+        description=(f"All {len(dated)} upcoming EDM, house, techno, dubstep and bass shows in Dallas-Fort Worth"
+                     f"{' at ' + ', '.join(top) + ' and more' if top else ''}, by date with tickets and free events."),
+        h1="Dallas-Fort Worth EDM shows",
+        intro=(f"{len(dated)} upcoming electronic shows across {len(counts)} venues"
+               f"{', ' + period if period else ''}, plus {len(weekly_all)} weekly nights."),
+        addr="", events=dated, venues=venues, today=today, nav=nav, current_href="/dallas-edm-events/",
+        weekly=weekly_all, empty_note="No upcoming shows are listed right now.")))
 
     # This weekend
     fri, sun = weekend_range(today)
@@ -580,9 +548,7 @@ def main():
     data = load_data()
     today = today_str()
     with open(os.path.join(ROOT, "index.html"), encoding="utf-8") as f:
-        page = f.read()
-    page = build_home(page, data, today)
-    write("index.html", page)
+        page = f.read()  # read only, for the site's CSS -- never written
 
     pages = build_landing_pages(page, data, today)
     keep = {rel for rel, _ in pages}
@@ -599,7 +565,7 @@ def main():
                     f"<changefreq>daily</changefreq></url>\n" for u in urls)
           + "</urlset>\n")
     write("robots.txt", f"User-agent: *\nAllow: /\n\nSitemap: {SITE}/sitemap.xml\n")
-    print(f"Built index.html + {len(pages)} landing page(s), sitemap with {len(urls)} URL(s).")
+    print(f"Built {len(pages)} landing page(s), sitemap with {len(urls)} URL(s).")
 
 
 if __name__ == "__main__":

@@ -49,8 +49,8 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           cp "$RUNNER_TEMP/events.js" "$RUNNER_TEMP/events_data.json" .
-          # Rebuild the static pages (pre-rendered homepage listings, landing
-          # pages, sitemap) from the latest index.html and the new events.
+          # Rebuild the SEO landing pages and sitemap from the new events
+          # (the homepage itself is never modified).
           python3 build_site.py
-          git add events.js events_data.json index.html sitemap.xml robots.txt this-weekend genres venues
+          git add events.js events_data.json sitemap.xml robots.txt dallas-edm-events this-weekend genres venues
           git diff --cached --quiet || (git commit -m "Automated events update" && git push origin main)
