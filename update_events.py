@@ -169,6 +169,15 @@ _GENRE_RULES = [
 # corrects an act's genre so later runs can't flip it back.
 GENRE_OVERRIDES = {
     "whethan": "Bass",
+    # Reviewed when Trap was added (Oct 2026): trap-first acts, plus two
+    # acts research had filed under Bass.
+    "rl grime": "Trap",
+    "flosstradamus": "Trap",
+    "valentino khan": "Trap",
+    "barnacle boi": "Trap",
+    "hex cougar": "Trap",
+    "josh baker": "House",
+    "level up - the ritual": "Dubstep",
 }
 
 
