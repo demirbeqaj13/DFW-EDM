@@ -55,6 +55,7 @@ VENUES = {
     "villagebeach": {"name": "The Village Beach Club", "address": "5670 Village Glen Dr, Dallas, TX 75206", "site": "https://villagebeachclub.com/event-calendar/"},
     "shyboy": {"name": "Shyboy Hi-Fi", "address": "1313 Main St, Dallas, TX 75202", "site": "https://shyboyhifi.com/"},
     "clubdedior": {"name": "Club De Dior", "address": "3650 N Buckner Blvd, Dallas, TX", "site": "https://www.instagram.com/portalafterhours/"},
+    "rubyroom": {"name": "Ruby Room", "address": "2625 Floyd St, Dallas, TX", "site": "https://www.instagram.com/sunset_sessionsdtx/"},
 }
 
 # Large, mixed-genre venues where a major touring EDM act can easily get lost
@@ -99,6 +100,8 @@ NO_RESALE_VENUES = ["sounders"]
 VENUE_FALLBACK_IMAGES = {
     # Club De Dior's only listings are Portal After Hours; use Portal's logo.
     "clubdedior": "img/portal-after-hours.jpg",
+    # Ruby Room's listings are Sunset Sessions; use its logo.
+    "rubyroom": "img/sunset-sessions.jpg",
     "silo": "https://silodallas.com/og-image.png",
     "ductwork": "https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png",
     "itlldo": "https://static1.squarespace.com/static/687877d212aabf1aafc5c893/t/687883bae925b43e83551a43/1752728506887/_ITLLDOCLUB.png?format=1500w",
@@ -160,10 +163,25 @@ HAUS_SUNDAYS_EVENT = {
     "recurring": "Weekly on Sundays",
 }
 
+# Sunset Sessions (Next Level): Sunday house party on the Ruby Room rooftop
+# at Green Light Social in Deep Ellum, 4 PM - 2 AM.
+SUNSET_SESSIONS_EVENT = {
+    "artist": "Sunset Sessions",
+    "venue": "rubyroom",
+    "date": None,
+    "time": "4:00 PM - 2:00 AM",
+    "genre": "House",
+    "direct": "https://www.instagram.com/sunset_sessionsdtx/",
+    # Its Instagram logo, saved in the repo as a square.
+    "image": "img/sunset-sessions.jpg",
+    "recurring": "Every Sunday",
+}
+
 FIXED_WEEKLY_SERIES = [
     (HAUS_SUNDAYS_EVENT, ("haus sundays",)),
     (COBA_RECURRING_EVENT, COBA_RECURRING_NAMES),
     (PORTAL_RECURRING_EVENT, ("portal",)),
+    (SUNSET_SESSIONS_EVENT, ("sunset sessions",)),
 ]
 
 # Card images must be real: the event's own promotional flyer, or failing that
@@ -415,11 +433,11 @@ TASK:
    free or ticketed; besides its own site, check its Resident Advisor (ra.co) and ma.to listings. For a
    free event set "free": true and use the event's own listing page (venue site, RA or ma.to event page,
    copied verbatim) as "direct". Only set "free" when the listing actually says free / no cover.
-6a. Weekly after-hours series are added by the script as fixed recurring cards -- do not include them
-   in "events": Coba's Ritual Fridays / Voltage Saturdays, and Portal After Hours (Club De Dior,
-   Fridays & Saturdays). Specific dated shows at those venues (a named guest DJ, an anniversary or a
-   holiday special on a particular night) should still be included as normal, using that night's own
-   ticket page (e.g. posh.vip or RA for Portal) as "direct".
+6a. Weekly series are added by the script as fixed recurring cards -- do not include them
+   in "events": Coba's Ritual Fridays / Voltage Saturdays, Portal After Hours (Club De Dior,
+   Fridays & Saturdays) and Sunset Sessions (Ruby Room, Sundays). Specific dated shows at those
+   venues (a named guest DJ, an anniversary or a holiday special on a particular night) should
+   still be included as normal, using that night's own ticket page (e.g. posh.vip or RA for Portal) as "direct".
 7. For each event, find its promotional image: the event-specific flyer/artwork, normally the og:image
    meta tag of the individual ticket page. Never use a venue logo, a generic site banner, or an image
    from a different event. If you cannot find the event's own image, leave image as null -- the
