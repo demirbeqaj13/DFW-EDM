@@ -325,9 +325,17 @@ function imgFallback(img){
   document.getElementById("closedNote").textContent = typeof CLOSED_VENUES_NOTE !== "undefined" ? CLOSED_VENUES_NOTE : "";
 
   // Venue / genre chips (native selects under the chip, so they work everywhere)
+  // Venues ordered by how many shows they have on the site right now
+  // (upcoming + weekly), most first; ties alphabetical.
+  var venueCounts = {};
+  EVENTS.forEach(function(e){
+    if(!e.date || e.date >= todayStr()) venueCounts[e.venue] = (venueCounts[e.venue] || 0) + 1;
+  });
   Object.keys(VENUES)
     .filter(function(key){ return !VENUES[key].closed; })
-    .sort(function(a,b){ return VENUES[a].name.localeCompare(VENUES[b].name); })
+    .sort(function(a,b){
+      return (venueCounts[b] || 0) - (venueCounts[a] || 0) || VENUES[a].name.localeCompare(VENUES[b].name);
+    })
     .forEach(function(key){
       var opt = document.createElement("option");
       opt.value = key; opt.textContent = VENUES[key].name;
