@@ -80,7 +80,14 @@ SELECTIVE_GENRE_VENUES = ["villagebeach"]
 # venue's main page hasn't caught up to displaying yet.
 VENUE_SECONDARY_SOURCES = {
     "itlldo": "https://linktr.ee/itlldoclub",
+    # Sounders posts each night as a news post; H.A.M. Promotions (its
+    # promoter) and ma.to list them too.
+    "sounders": "https://soundersdallas.com/blogs/news + https://www.hampromos.com/blogs/news + https://ma.to/venue/soundersdallas",
 }
+
+# Venues whose calendar is built around themed nights / series rather than
+# named headliners. Research must list those nights even with no DJ named.
+EVENT_CENTERED_VENUES = ["sounders"]
 
 VENUE_FALLBACK_IMAGES = {
     "silo": "https://silodallas.com/og-image.png",
@@ -348,6 +355,13 @@ TASK:
    source is not a lower-confidence find -- add it the same as anything from the main site.
 6. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
    direct ticket purchase URL (the venue's own primary ticket link, not a resale site).
+6c. EVENT-CENTERED VENUES -- {", ".join(VENUES[k]["name"] for k in EVENT_CENTERED_VENUES)}: these book
+   themed nights and series (e.g. Sounders' "House on Levee St.", "Hard Wired", "Techno & Tequila",
+   "Freakquency") more than named headliners. Include every upcoming electronic/dance night even when
+   no DJ is named: use the night's own title as "artist", pick the genre from how the night is billed
+   (a house night -> House; hardstyle / hard dance -> Hard Dance; techno incl. hard techno -> Techno), and set
+   "free": true when the listing says free entry / free with RSVP. Check every source listed for them
+   in 5a -- their news posts are where new nights appear first.
 6b. SHYBOY HI-FI -- a downtown hi-fi listening bar that books DJ nights and residencies, many of them
    FREE (no ticket). Include its DJ / dance-music nights (house, techno, disco, dance, electronic) whether
    free or ticketed; besides its own site, check its Resident Advisor (ra.co) and ma.to listings. For a
