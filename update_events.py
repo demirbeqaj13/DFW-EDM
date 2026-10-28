@@ -143,7 +143,7 @@ STUBHUB_LOOKUP_WINDOW_DAYS = 30
 # filter instead of dozens of one-off subgenre strings.
 MAIN_GENRES = [
     "House", "Techno", "Trance", "Drum & Bass", "Dubstep", "Bass",
-    "UK Bass / Garage", "Downtempo", "Hard Dance",
+    "UK Bass / Garage", "Downtempo", "Hard Dance", "Trap",
 ]
 
 # (pattern, main genre), checked in order against each part of a raw label
@@ -159,17 +159,46 @@ _GENRE_RULES = [
     (r"downtempo|chill|lo-?fi|ambient|trip ?hop", "Downtempo"),
     (r"techno", "Techno"),
     (r"house|disco|funk|big ?room|electro(?!nic|-? ?pop)|eurodance|guarachero|latin", "House"),
-    (r"bass|trap|phonk|moombah|future|wave|midtempo|glitch", "Bass"),
+    (r"trap|phonk", "Trap"),
+    (r"bass|moombah|future|wave|midtempo|glitch", "Bass"),
 ]
 
 
-def main_genre(raw):
-    """Map any genre label to one of MAIN_GENRES (defaults to House)."""
+# Genre calls made by hand that always win over research, matched as a
+# lowercase substring of the artist name. Add an entry when the site owner
+# corrects an act's genre so later runs can't flip it back.
+GENRE_OVERRIDES = {
+    "whethan": "Bass",
+    # Reviewed when Trap was added (Oct 2026): trap-first acts, plus two
+    # acts research had filed under Bass.
+    "rl grime": "Trap",
+    "flosstradamus": "Trap",
+    "valentino khan": "Trap",
+    "barnacle boi": "Trap",
+    "hex cougar": "Trap",
+    "josh baker": "House",
+    "level up - the ritual": "Dubstep",
+}
+
+
+def specific_genre(raw):
+    """The main genre a label names, or None for vague labels such as
+    "Electronic", "EDM", "Dance / DJ Set" or "Electropop"."""
     for part in re.split(r"[/,|()]", (raw or "").lower()):
         for pattern, genre in _GENRE_RULES:
             if re.search(pattern, part):
                 return genre
-    return "House"
+    return None
+
+
+def main_genre(raw):
+    """Map any genre label to one of MAIN_GENRES (House if it's vague)."""
+    return specific_genre(raw) or "House"
+
+
+def override_genre(artist):
+    name = (artist or "").lower()
+    return next((g for key, g in GENRE_OVERRIDES.items() if key in name), None)
 
 
 # Cost controls. Shows that were searched and had no StubHub listing / no
@@ -274,9 +303,12 @@ TASK:
    crossover, hyperpop-adjacent electronic acts, and DJ sets generally. When in doubt because an act
    straddles electronic and another genre (e.g. an "electropop" or "pop-EDM" artist), err on the side
    of including them with an accurate genre label rather than skipping them.
-3a. GENRE LABEL -- "genre" must be exactly ONE of: {", ".join(MAIN_GENRES)}. Pick the act's main
+3a. GENRE LABEL -- "genre" must be exactly ONE of: {", ".join(MAIN_GENRES)}. Judge each act by
+   what they play NOW -- their releases and tour billing from roughly the last two years -- not
+   older hits, the venue's category tag, or a generic word like "Electronic", "EDM", "Dance" or
+   "Pop" (never answer with one of those). Search the artist if you aren't sure. Pick the act's main
    style (tech house, afro house, disco, big room -> House; melodic/hard techno -> Techno; riddim ->
-   Dubstep; trap, future bass, melodic bass -> Bass; hardstyle, hardcore -> Hard Dance; jungle ->
+   Dubstep; trap, phonk -> Trap; future bass, melodic bass -> Bass; hardstyle, hardcore -> Hard Dance; jungle ->
    Drum & Bass; UK garage, bassline, grime -> UK Bass / Garage; chill / ambient -> Downtempo).
 4. HIGH-RISK VENUES -- {", ".join(VENUES[k]["name"] for k in HIGH_RISK_MIXED_GENRE_VENUES)}: these are
    large arenas/amphitheaters that book mostly non-electronic acts (country, rock, family shows,
@@ -715,6 +747,8 @@ def merge_with_previous(new_events, previous_events, today_str):
         if e.get("image") == prev.get("image") and prev.get("focus_src"):
             e["focus"] = prev.get("focus")
             e["focus_src"] = prev["focus_src"]
+        if specific_genre(e.get("genre")) is None and prev.get("genre") in MAIN_GENRES:
+            e["genre"] = prev["genre"]  # vague label this run; keep the genre already worked out
 
     merged = list(new_events)
     carried = [prev for key, prev in prev_by_key.items() if key not in new_by_key]
@@ -1019,6 +1053,69 @@ def fill_event_images(events, venue_images):
     return still_missing
 
 
+GENRE_LOOKUP_SYSTEM_PROMPT = f"""You classify electronic music acts playing in Dallas-Fort Worth.
+For each numbered act, decide which ONE of these genres best describes what they play NOW:
+{", ".join(MAIN_GENRES)}.
+
+Be analytical: search the artist and weigh their releases, tour billing and DJ sets from roughly the
+last two years over older hits or how they were known years ago. Use the event name for context
+(e.g. a "(DJ Set)" or a festival lineup). If an act truly spans two, pick the one their current
+headline sets lean toward. Answer with a genre from the list exactly as written.
+
+Your final message must contain ONLY a JSON object between <genres_json> and </genres_json>:
+<genres_json>{{"results": [{{"i": 0, "genre": "Bass"}}]}}</genres_json>
+Keep it compact (no indentation)."""
+
+
+def run_genre_lookup(client, events_vague):
+    """Dedicated pass for events whose research label was too vague to map
+    (e.g. "Electronic / Electropop"). Returns {index: genre}; None on failure."""
+    if not events_vague:
+        return {}
+    listing = "\n".join(
+        f'{i}. "{e["artist"]}" at {VENUES.get(e["venue"], {}).get("name", e["venue"])}, {e.get("date")}'
+        f' (research labeled it "{e.get("genre")}")'
+        for i, e in enumerate(events_vague)
+    )
+    messages = [{"role": "user", "content": f"Classify these {len(events_vague)} acts:\n\n{listing}"}]
+    tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": min(30, len(events_vague) * 3)}]
+    for _ in range(8):
+        try:
+            response = tracked_create(
+                "genre_lookup",
+                client,
+                model=MODEL,
+                max_tokens=MAX_TOKENS_PER_TURN,
+                output_config={"effort": RESEARCH_EFFORT},
+                system=GENRE_LOOKUP_SYSTEM_PROMPT,
+                messages=messages,
+                tools=tools,
+                cache_control={"type": "ephemeral"},
+            )
+        except Exception as exc:
+            print(f"Genre lookup pass hit an API error, skipping (non-fatal): {exc}", file=sys.stderr)
+            return None
+        if response.stop_reason == "pause_turn":
+            messages.append({"role": "assistant", "content": response.content})
+            continue
+        text = "".join(b.text for b in response.content if getattr(b, "type", None) == "text")
+        match = re.search(r"<genres_json>(.*?)</genres_json>", text, re.S)
+        if not match:
+            print("Genre lookup pass did not return a parseable result, skipping (non-fatal).", file=sys.stderr)
+            return None
+        try:
+            parsed = json.loads(match.group(1).strip())
+        except Exception as exc:
+            print(f"Genre lookup pass returned invalid JSON, skipping (non-fatal): {exc}", file=sys.stderr)
+            return None
+        return {
+            r["i"]: r["genre"] for r in parsed.get("results", [])
+            if isinstance(r.get("i"), int) and r.get("genre") in MAIN_GENRES
+        }
+    print("Genre lookup pass exceeded max turns, skipping (non-fatal).", file=sys.stderr)
+    return None
+
+
 IMAGE_LOOKUP_SYSTEM_PROMPT = """You find the official promotional flyer image for specific
 events. For each numbered event, use web_fetch on its ticket URL (and the venue's own event page
 if needed) and return the URL of THAT event's flyer/artwork image, copied exactly from the fetched
@@ -1130,8 +1227,20 @@ def main():
         print(f"Image lookup pass found {found} of {len(missing)} missing flyer(s).")
     fill_face_focus(data["events"], data["venue_images"])
     data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
+    # Genres: hand overrides win; vague research labels get a dedicated,
+    # artist-by-artist check instead of a blind default; everything else maps
+    # to its main genre.
+    vague = [
+        e for e in data["events"]
+        if not override_genre(e.get("artist")) and specific_genre(e.get("genre")) is None
+    ]
+    if vague:
+        print(f"Running genre lookup for {len(vague)} event(s) with a vague genre label...")
+        for i, genre in (run_genre_lookup(client, vague) or {}).items():
+            if 0 <= i < len(vague):
+                vague[i]["genre"] = genre
     for e in data["events"]:
-        e["genre"] = main_genre(e.get("genre"))
+        e["genre"] = override_genre(e.get("artist")) or main_genre(e.get("genre"))
 
     cutoff_str = (date.today() + timedelta(days=STUBHUB_LOOKUP_WINDOW_DAYS)).isoformat()
     needs_lookup = [
