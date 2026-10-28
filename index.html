@@ -150,8 +150,9 @@
   .info-link:hover{text-decoration:underline;}
 
   /* Every week carousel */
-  .weekly{margin-top:34px;}
-  .section-title{font-weight:700;font-size:20px;margin:0 0 12px;}
+  /* Weekly series sit at the top, right under the month row. */
+  .weekly{margin-top:18px;}
+  .section-title{font-weight:700;font-size:18px;margin:0 0 10px;}
   .carousel{display:flex;gap:10px;overflow-x:auto;padding:0 16px 4px;margin:0 -16px;scroll-snap-type:x mandatory;scroll-padding-inline:16px;scrollbar-width:none;}
   .carousel::-webkit-scrollbar{display:none;}
   .wk{
@@ -212,11 +213,11 @@
 </nav>
 
 <main class="wrap">
-  <section id="upcoming" aria-label="Upcoming shows"><div id="eventsContainer"></div></section>
   <section class="weekly" id="every-week" aria-labelledby="everyWeekTitle">
     <h2 class="section-title" id="everyWeekTitle">Every week</h2>
     <div class="carousel" id="weeklyContainer"></div>
   </section>
+  <section id="upcoming" aria-label="Upcoming shows"><div id="eventsContainer"></div></section>
 </main>
 
 <footer class="wrap">
