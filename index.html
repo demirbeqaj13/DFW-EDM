@@ -87,10 +87,20 @@
   .chip select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
   .chip:has(select:focus-visible){outline:2px solid var(--pink);outline-offset:2px;}
 
+  /* Clear filters: greyed out until something is filtered */
+  .clear-row{display:flex;padding-top:4px;}
+  .clear-btn{
+    display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0;
+    background:none;border:0;cursor:pointer;font-weight:600;font-size:13.5px;color:var(--pink);
+  }
+  .clear-btn svg{width:14px;height:14px;}
+  .clear-btn:hover:not(:disabled){text-decoration:underline;text-underline-offset:3px;}
+  .clear-btn:disabled{color:var(--tertiary);opacity:.55;cursor:default;}
+
   /* Sticky month row */
   .months{
     position:sticky;top:0;z-index:20;background:var(--bg);
-    border-bottom:1px solid var(--border);margin-top:8px;
+    border-bottom:1px solid var(--border);margin-top:0;
   }
   .months-row{display:flex;gap:22px;overflow-x:auto;padding:0 16px;margin:0 -16px;scrollbar-width:none;}
   .months-row::-webkit-scrollbar{display:none;}
@@ -199,6 +209,12 @@
     <label class="chip" id="venueChip"><span id="venueLabel">Venue</span> &#9662;
       <select id="venueSelect" aria-label="Venue"><option value="">All venues</option></select>
     </label>
+  </div>
+  <div class="clear-row">
+    <button type="button" class="clear-btn" id="clearFilters" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      Clear filters
+    </button>
   </div>
 </div>
 
@@ -504,7 +520,24 @@ function imgFallback(img){
     var weekly = (startMonth || range) ? [] : EVENTS.filter(function(e){ return !e.date && isWeekly(e) && matchesCommon(e, q); });
     weeklySection.hidden = !weekly.length;
     weeklyContainer.innerHTML = weekly.map(weeklyHTML).join("");
+    clearBtn.disabled = !(q || whenFilter || genreSelect.value || venueSelect.value || startMonth);
   }
+
+  // Clear filters: search, Tonight / This weekend, genre, venue and month.
+  var clearBtn = document.getElementById("clearFilters");
+  clearBtn.addEventListener("click", function(){
+    searchInput.value = "";
+    whenFilter = "";
+    genreSelect.value = "";
+    venueSelect.value = "";
+    startMonth = "";
+    syncToggleChips();
+    syncSelectChip(genreSelect, "genreChip", "genreLabel", "Genre");
+    syncSelectChip(venueSelect, "venueChip", "venueLabel", "Venue");
+    renderMonthTabs();
+    render();
+    monthTabs.scrollLeft = 0;
+  });
 
   venueSelect.addEventListener("change", function(){ syncSelectChip(venueSelect, "venueChip", "venueLabel", "Venue"); render(); });
   genreSelect.addEventListener("change", function(){ syncSelectChip(genreSelect, "genreChip", "genreLabel", "Genre"); render(); });
