@@ -283,6 +283,8 @@ function imgFallback(img){
     var m = artist.match(/^(.+?)\s+(?:ft\.?|feat\.?|w\/)\s+(.+)$/i) || artist.match(/^(.+?)\s+\|\s+(.+)$/);
     return m ? {title: m[1], lineup: m[2]} : {title: artist, lineup: ""};
   }
+  // Undated events only show (in "Every week") if they say which day(s) they run.
+  function isWeekly(e){ return WEEKDAYS.some(function(d){ return new RegExp(d, "i").test(e.recurring || ""); }); }
   function venueName(e){ return VENUES[e.venue] ? VENUES[e.venue].name : e.venue; }
   function imgTag(e, extraClass){
     // Cards show the event's own flyer, else the venue's logo -- never a
@@ -501,7 +503,7 @@ function imgFallback(img){
     eventsContainer.innerHTML = html;
 
     // Every week: hidden while a specific month or date filter is on.
-    var weekly = (startMonth || range) ? [] : EVENTS.filter(function(e){ return !e.date && matchesCommon(e, q); });
+    var weekly = (startMonth || range) ? [] : EVENTS.filter(function(e){ return !e.date && isWeekly(e) && matchesCommon(e, q); });
     weeklySection.hidden = !weekly.length;
     weeklyContainer.innerHTML = weekly.map(weeklyHTML).join("");
   }

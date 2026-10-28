@@ -361,7 +361,10 @@ TASK:
    no DJ is named: use the night's own title as "artist", pick the genre from how the night is billed
    (a house night -> House; hardstyle / hard dance -> Hard Dance; techno incl. hard techno -> Techno), and set
    "free": true when the listing says free entry / free with RSVP. Check every source listed for them
-   in 5a -- their news posts are where new nights appear first.
+   in 5a -- their news posts are where new nights appear first -- and also web_search each series
+   name + "Sounders Dallas" (Eventbrite, Eventim, ma.to) to find its dated listings. Every event here
+   needs a real date and the specific night's own post or ticket page as "direct"; never list a series
+   without a date or point "direct" at a generic news / events index page.
 6b. SHYBOY HI-FI -- a downtown hi-fi listening bar that books DJ nights and residencies, many of them
    FREE (no ticket). Include its DJ / dance-music nights (house, techno, disco, dance, electronic) whether
    free or ticketed; besides its own site, check its Resident Advisor (ra.co) and ma.to listings. For a
@@ -402,7 +405,7 @@ tag or after the closing tag. Structure:
     {{
       "artist": "string",
       "venue": "one of the venue keys above",
-      "date": "YYYY-MM-DD or null for recurring/undated series",
+      "date": "YYYY-MM-DD; null ONLY for a series that runs every week, with \"recurring\" set",
       "time": "string, e.g. '9:00 PM'",
       "genre": "exactly one of the main genres listed above, e.g. 'House' or 'Techno'",
       "direct": "https://... direct ticket URL",
@@ -1224,6 +1227,24 @@ def run_image_lookup(client, events_missing):
     return None
 
 
+_WEEKDAY = re.compile(r"monday|tuesday|wednesday|thursday|friday|saturday|sunday", re.I)
+
+
+def drop_undated_non_weekly(events):
+    """An event without a date is shown as a weekly series ("SUNDAYS · 10 PM"),
+    so its "recurring" text must name the day(s) it runs. Drop undated
+    listings that don't (e.g. a series research found but couldn't date,
+    "dates announced via Sounders news") instead of showing them wrong."""
+    kept, dropped = [], []
+    for e in events:
+        weekly = bool(_WEEKDAY.search(e.get("recurring") or ""))
+        (kept if e.get("date") or weekly else dropped).append(e)
+    if dropped:
+        print("Dropped undated, non-weekly listing(s): " + "; ".join(
+            f'{e.get("artist")} ({e.get("venue")})' for e in dropped), file=sys.stderr)
+    return kept
+
+
 def main():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -1241,6 +1262,7 @@ def main():
     previous_events = load_previous_events()
     data["events"] = merge_with_previous(data["events"], previous_events, today_str)
     data["events"] = combine_coba_recurring(data["events"])
+    data["events"] = drop_undated_non_weekly(data["events"])
     data["venue_images"] = venue_logo_images()
     missing = fill_event_images(data["events"], data["venue_images"])
     skipped = [e for e in missing if checked_recently(e, "image_checked", IMAGE_LOOKUP_RECHECK_DAYS, today_str)]
