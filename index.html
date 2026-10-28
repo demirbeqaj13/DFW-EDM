@@ -4,169 +4,231 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="impact-site-verification" value="542e9681-75be-44b8-a4c7-a84bc7050674">
+<meta name="theme-color" content="#0A0A10">
 <title>DFW EDM &amp; House Events</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0a0a10;
-    --bg2:#0f0f18;
-    --card:#14141f;
-    --border:#23232f;
-    --text:#f2f2f6;
-    --sub:#9a9aa8;
-    --muted:#6f6f7d;
-    --pink:#ec4899;
-    --purple:#8b5cf6;
-    --blue:#3b82f6;
-    --cyan:#22d3ee;
-    --orange:#f97316;
-    --gold:#eab308;
-    --green:#22c55e;
+    --bg:#0A0A10;
+    --surface:#121219;
+    --field:#15151D;
+    --border:#2A2A36;
+    --text:#F2F2F6;
+    --sub:#C4C4D2;      /* time / venue: ~11:1 on --bg */
+    --tertiary:#A1A1B5; /* labels, counts: ~7.5:1 on --bg */
+    --pink:#F0479A;
+    --purple:#8B5CF6;
+    --on-pink:#14060D;  /* dark text on pink keeps 4.5:1+ */
+    --green:#22C55E;
+    --head:"Space Grotesk",system-ui,sans-serif;
+    --body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  html{-webkit-text-size-adjust:100%;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.45;}
   a{color:inherit;text-decoration:none;}
+  button,input,select{font:inherit;color:inherit;}
+  :focus-visible{outline:2px solid var(--pink);outline-offset:2px;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 16px;}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
 
-  header.nav{
-    display:flex;align-items:center;gap:16px;
-    padding:18px 28px;border-bottom:1px solid var(--border);
-    background:var(--bg2);flex-wrap:wrap;
+  /* Header */
+  .site-header{border-bottom:1px solid var(--border);position:relative;}
+  .site-header .wrap{display:flex;align-items:center;gap:12px;height:64px;}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+  .brand img{width:40px;height:40px;border-radius:50%;border:2px solid #fff;flex:none;display:block;}
+  .brand-text{min-width:0;}
+  .wordmark{font-family:var(--head);font-weight:700;font-size:18px;letter-spacing:.5px;line-height:1.1;}
+  .tagline{display:block;font-size:12.5px;color:var(--tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .menu-btn{
+    width:44px;height:44px;flex:none;display:grid;place-items:center;cursor:pointer;
+    background:var(--field);border:1px solid var(--border);border-radius:12px;
   }
+  .menu-btn svg{width:20px;height:20px;}
+  .menu-panel{
+    position:absolute;right:16px;top:60px;z-index:30;min-width:220px;
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  .menu-panel[hidden]{display:none;}
+  .menu-panel a{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:10px;font-weight:500;}
+  .menu-panel a:hover{background:var(--field);}
 
-  .logo{margin-right:auto;display:block;line-height:0;}
-  .logo img{
-    width:56px;height:56px;display:block;
-    border-radius:50%;border:2px solid #fff;
+  /* Search + chips */
+  .controls{padding-top:14px;}
+  .search{position:relative;}
+  .search svg{position:absolute;left:15px;top:50%;width:18px;height:18px;transform:translateY(-50%);color:var(--tertiary);pointer-events:none;}
+  .search input{
+    width:100%;height:48px;padding:0 14px 0 44px;
+    background:var(--field);border:1px solid var(--border);border-radius:12px;
+    font-size:15px;outline:none;
   }
-  .search-input{
-    flex:1;min-width:180px;max-width:340px;
-    background:#101018;border:1px solid var(--border);color:var(--text);
-    border-radius:10px;padding:10px 14px;font-size:14px;outline:none;
+  .search input::placeholder{color:var(--tertiary);}
+  .search input:focus{border-color:var(--pink);}
+  .chips{
+    display:flex;gap:8px;overflow-x:auto;padding:12px 16px 2px;margin:0 -16px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
   }
-  .search-input::placeholder{color:var(--muted);}
-  .search-input:focus{border-color:var(--purple);}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{
+    position:relative;flex:none;display:inline-flex;align-items:center;gap:4px;
+    height:36px;padding:0 14px;border-radius:999px;cursor:pointer;white-space:nowrap;
+    background:var(--field);border:1px solid var(--border);color:var(--sub);
+    font-family:var(--head);font-weight:500;font-size:14px;
+  }
+  .chip:hover{border-color:#3A3A4A;color:var(--text);}
+  .chip.active{background:var(--pink);border-color:var(--pink);color:var(--on-pink);font-weight:600;}
+  .chip select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+  .chip:has(select:focus-visible){outline:2px solid var(--pink);outline-offset:2px;}
 
-  select.dropdown{
-    appearance:none;-webkit-appearance:none;
-    background:#ffffff;color:#1a1a24;
-    border:1px solid #e4e4ea;border-radius:10px;
-    padding:10px 36px 10px 14px;font-size:14px;font-weight:600;
-    cursor:pointer;min-width:150px;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%236b6b78'/></svg>");
-    background-repeat:no-repeat;background-position:right 14px center;
-    box-shadow:0 1px 2px rgba(0,0,0,0.15);
-    transition:box-shadow .15s ease, transform .1s ease;
+  /* Sticky month row */
+  .months{
+    position:sticky;top:0;z-index:20;background:var(--bg);
+    border-bottom:1px solid var(--border);margin-top:12px;
   }
-  select.dropdown:hover{box-shadow:0 2px 8px rgba(236,72,153,0.18);}
-  select.dropdown:focus{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,0.35);}
+  .months-row{display:flex;gap:22px;overflow-x:auto;padding:0 16px;margin:0 -16px;scrollbar-width:none;}
+  .months-row::-webkit-scrollbar{display:none;}
+  .month{
+    flex:none;background:none;border:0;cursor:pointer;padding:14px 0 11px;
+    font-family:var(--head);font-weight:600;font-size:13px;letter-spacing:1.2px;
+    color:var(--tertiary);border-bottom:2px solid transparent;
+  }
+  .month:hover{color:var(--text);}
+  .month.active{color:var(--text);border-bottom-color:var(--pink);}
 
-  .hero{padding:24px 28px 0;position:relative;overflow:hidden;max-width:1400px;margin:0 auto;}
-  .subtitle{color:var(--sub);font-size:16px;margin:0;}
-  .subtitle-mobile{display:none;}
-  .month-tabs{
-    display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;
-    margin:16px 0 0;padding-bottom:14px;font-size:14px;font-weight:700;
-    border-bottom:1px solid rgba(255,255,255,0.07);
-    text-transform:uppercase;letter-spacing:1px;
+  /* Event list */
+  main{padding-bottom:24px;}
+  .month-head{
+    font-family:var(--head);font-weight:600;font-size:12px;letter-spacing:1.4px;
+    text-transform:uppercase;color:var(--tertiary);margin:26px 0 0;
   }
-  .month-tab{
-    background:none;border:none;color:var(--sub);cursor:pointer;
-    font:inherit;letter-spacing:inherit;text-transform:inherit;
-    padding:4px 2px;border-bottom:2px solid transparent;
+  .empty{color:var(--sub);font-size:14px;margin:10px 0 0;}
+  .day-head{
+    display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    margin:22px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border);
   }
-  .month-tab:hover{color:var(--text);}
-  .month-tab.active{color:var(--text);border-bottom-color:var(--pink);}
-  .month-empty{color:var(--muted);font-size:14px;margin:0;}
-  .month-sep{color:var(--muted);padding:0 12px;user-select:none;}
+  .day-head h3{margin:0;font-family:var(--head);font-weight:700;font-size:18px;}
+  .day-count{font-family:var(--head);font-weight:500;font-size:11.5px;letter-spacing:1.1px;color:var(--tertiary);white-space:nowrap;}
+  .day-count .soon{color:var(--pink);}
+  .cards{display:grid;grid-template-columns:1fr;gap:10px;}
+  @media (min-width:760px){ .cards{grid-template-columns:1fr 1fr;} }
 
-  main{padding:8px 28px 60px;max-width:1400px;margin:0 auto;}
-  .month-header{
-    font-size:14px;font-weight:700;color:var(--sub);
-    text-transform:uppercase;letter-spacing:1px;
-    margin:34px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);
+  .ev{
+    display:flex;gap:14px;padding:10px;border-radius:16px;
+    background:var(--surface);border:1px solid var(--border);
   }
-  /* Same space above the first section title as below it (its 8px padding-bottom). */
-  #eventsContainer > .month-header:first-child{margin-top:0;}
-  .grid{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-    gap:20px;
+  .thumb{width:96px;height:120px;flex:none;border-radius:12px;overflow:hidden;background:#000;}
+  .thumb img{width:100%;height:100%;object-fit:cover;object-position:50% 25%;display:block;}
+  .ev-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px;padding:2px 2px 0 0;}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
+  .pill{
+    display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;
+    font-family:var(--head);font-weight:600;font-size:11px;letter-spacing:.4px;
+    color:var(--c);background:color-mix(in srgb, var(--c) 14%, transparent);
+    border:1px solid color-mix(in srgb, var(--c) 32%, transparent);
   }
-  .card{
-    background:var(--card);border:1px solid var(--border);border-radius:14px;
-    overflow:hidden;display:flex;flex-direction:column;
-    transition:transform .15s ease, border-color .15s ease;
+  .pill.free{--c:var(--green);letter-spacing:1px;}
+  .ev-title{font-family:var(--head);font-weight:700;font-size:16.5px;line-height:1.2;overflow-wrap:anywhere;}
+  .lineup{font-size:13px;color:var(--sub);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .meta{font-size:13.5px;color:var(--sub);}
+  .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:auto;padding-top:8px;}
+  .btn-tickets{
+    display:inline-flex;align-items:center;height:34px;padding:0 16px;border-radius:10px;
+    background:var(--pink);color:var(--on-pink);font-family:var(--head);font-weight:700;font-size:14px;
   }
-  .card:hover{transform:translateY(-3px);border-color:#3a3a4c;}
-  .card-image{
-    height:150px;position:relative;overflow:hidden;background:#000;
-  }
-  .card-image img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;}
-  .card-image::after{
-    content:"";position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(180deg, rgba(10,10,16,0.05), rgba(10,10,16,0.65));
-  }
-  .genre-badge{
-    position:absolute;top:10px;left:10px;z-index:1;
-    background:rgba(10,10,16,0.75);backdrop-filter:blur(4px);
-    color:#fff;font-size:11px;font-weight:700;
-    padding:4px 10px;border-radius:999px;
-  }
-  .card-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;}
-  .card-artist{font-size:16px;font-weight:700;line-height:1.25;}
-  .card-meta{font-size:13px;color:var(--sub);}
-  .card-venue{font-size:13px;color:var(--muted);}
-  .card-actions{display:flex;align-items:stretch;gap:8px;margin-top:10px;flex-wrap:wrap;}
-  .btn{
-    display:flex;align-items:center;justify-content:center;
-    height:38px;
-    font-size:12px;font-weight:700;padding:0 10px;border-radius:8px;
-    border:1px solid var(--border);flex:1;text-align:center;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .btn-direct{background:linear-gradient(90deg,var(--pink),var(--purple));color:#fff;border:none;}
-  .btn-resale{background:transparent;color:var(--sub);}
-  .btn-resale:hover{color:var(--text);border-color:#3a3a4c;}
+  .btn-tickets:hover{filter:brightness(1.08);}
+  .resale{font-size:12.5px;color:var(--tertiary);}
+  .resale a{text-decoration:underline;text-underline-offset:2px;text-decoration-color:#4A4A5A;}
+  .resale a:hover{color:var(--text);}
+  .info-link{font-family:var(--head);font-weight:600;font-size:14px;color:var(--green);}
+  .info-link:hover{text-decoration:underline;}
 
-  .closed-note{margin-top:40px;font-size:13px;color:var(--muted);font-style:italic;}
-
-  footer{padding:24px 28px 40px;color:var(--muted);font-size:12px;text-align:center;}
-
-  @media (max-width:640px){
-    /* Phones: description beside the logo, search + filters full width below. */
-    header.nav{
-      display:grid;grid-template-columns:auto minmax(0,1fr);
-      column-gap:14px;row-gap:8px;align-items:center;padding:14px 16px;
-    }
-    .logo{grid-column:1;margin:0;}
-    .subtitle-mobile{display:block;grid-column:2;font-size:14px;line-height:1.4;}
-    .subtitle-desktop{display:none;}
-    .search-input,select.dropdown{grid-column:1 / -1;width:100%;max-width:none;min-width:0;}
-    .search-input{margin-top:6px;}
-    .hero{padding-top:20px;}
-    .month-tabs{margin-top:0;}
+  /* Every week carousel */
+  .weekly{margin-top:34px;}
+  .section-title{font-family:var(--head);font-weight:700;font-size:20px;margin:0 0 12px;}
+  .carousel{display:flex;gap:10px;overflow-x:auto;padding:0 16px 4px;margin:0 -16px;scroll-snap-type:x mandatory;scroll-padding-inline:16px;scrollbar-width:none;}
+  .carousel::-webkit-scrollbar{display:none;}
+  .wk{
+    flex:none;width:248px;scroll-snap-align:start;border-radius:14px;overflow:hidden;
+    background:var(--surface);border:1px solid var(--border);
   }
+  .wk:hover{border-color:#3A3A4A;}
+  .wk-img{height:84px;background:#000;}
+  .wk-img img{width:100%;height:100%;object-fit:cover;display:block;}
+  .wk-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;}
+  .wk-when{font-family:var(--head);font-weight:600;font-size:11.5px;letter-spacing:1.1px;color:var(--pink);}
+  .wk-title{font-family:var(--head);font-weight:700;font-size:15px;line-height:1.2;}
+  .wk-venue{font-size:13px;color:var(--sub);}
+
+  .no-results{color:var(--sub);padding:36px 0;text-align:center;}
+
+  footer.wrap{border-top:1px solid var(--border);margin-top:40px;padding-top:28px;padding-bottom:40px;}
+  .submit{font-family:var(--head);font-weight:600;font-size:17px;margin:0 0 6px;}
+  .submit a{color:var(--pink);}
+  .submit a:hover{text-decoration:underline;}
+  .fine{font-size:12.5px;color:var(--tertiary);margin:6px 0 0;}
 </style>
 </head>
 <body>
 
-<header class="nav">
-  <a class="logo" href="/"><img src="logo.png" alt="DFW EDM"></a>
-  <p class="subtitle subtitle-mobile">Your home for Dallas-Fort Worth electronic music events, artists, and venues. All in one place.</p>
-  <input type="text" class="search-input" id="searchInput" placeholder="Search artist or venue...">
-  <select class="dropdown" id="venueSelect"><option value="">All Venues</option></select>
-  <select class="dropdown" id="genreSelect"><option value="">All Genres</option></select>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/">
+      <img src="logo.png" alt="">
+      <span class="brand-text">
+        <span class="wordmark">DFW EDM</span>
+        <span class="tagline">Dallas&ndash;Fort Worth electronic music</span>
+      </span>
+    </a>
+    <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menuPanel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </div>
+  <nav class="menu-panel" id="menuPanel" hidden aria-label="Site">
+    <a href="#upcoming">Upcoming shows</a>
+    <a href="#every-week">Every week</a>
+    <a href="#submit" id="menuSubmit">Submit an event</a>
+  </nav>
 </header>
 
-<section class="hero">
-  <p class="subtitle subtitle-desktop">Your home for Dallas-Fort Worth electronic music events, artists, and venues. All in one place.</p>
-  <nav class="month-tabs" id="monthTabs" aria-label="Jump to month"></nav>
-</section>
+<div class="wrap controls">
+  <label class="search">
+    <span class="sr-only">Search artist or venue</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input type="search" id="searchInput" placeholder="Search artist or venue" autocomplete="off">
+  </label>
+  <div class="chips" role="group" aria-label="Filters">
+    <button type="button" class="chip" data-when="tonight" aria-pressed="false">Tonight</button>
+    <button type="button" class="chip" data-when="weekend" aria-pressed="false">This weekend</button>
+    <button type="button" class="chip" id="freeChip" aria-pressed="false">Free</button>
+    <label class="chip" id="genreChip"><span id="genreLabel">Genre</span> &#9662;
+      <select id="genreSelect" aria-label="Genre"><option value="">All genres</option></select>
+    </label>
+    <label class="chip" id="venueChip"><span id="venueLabel">Venue</span> &#9662;
+      <select id="venueSelect" aria-label="Venue"><option value="">All venues</option></select>
+    </label>
+  </div>
+</div>
 
-<main id="app">
-  <div id="eventsContainer"></div>
-  <p class="closed-note" id="closedNote"></p>
+<nav class="months" aria-label="Months">
+  <div class="wrap"><div class="months-row" id="monthTabs"></div></div>
+</nav>
+
+<main class="wrap">
+  <section id="upcoming" aria-label="Upcoming shows"><div id="eventsContainer"></div></section>
+  <section class="weekly" id="every-week" aria-labelledby="everyWeekTitle">
+    <h2 class="section-title" id="everyWeekTitle">Every week</h2>
+    <div class="carousel" id="weeklyContainer"></div>
+  </section>
 </main>
 
-<footer>DFW EDM &middot; refreshed weekly &middot; last updated <span id="lastUpdated"></span></footer>
+<footer class="wrap" id="submit">
+  <p class="submit">Know a show we're missing? <a id="submitLink" href="#">Submit an event &rarr;</a></p>
+  <p class="fine">Refreshed every few days &middot; last updated <span id="lastUpdated"></span></p>
+  <p class="fine" id="closedNote"></p>
+</footer>
 
 <script>
   // Bust browser caches every 10 minutes so new event lists show up promptly.
@@ -181,51 +243,104 @@ function imgFallback(img){
   img.src = rest[0];
 }
 (function(){
-  function fmtDate(d){
-    if(!d) return "Recurring";
-    var parts = d.split("-");
-    var dt = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
-    return dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+  // Where "Submit an event" goes. Set this to a form or mailto: link.
+  var SUBMIT_EVENT_URL = "";
+
+  // The site's main genres (alphabetical) and their pill colors.
+  var GENRE_COLORS = {
+    "Bass": "#FB923C", "Downtempo": "#CBD5E1", "Drum & Bass": "#A3E635",
+    "Dubstep": "#A78BFA", "Hard Dance": "#E879F9", "House": "#F5A524",
+    "Techno": "#4C8DFF", "Trance": "#22D3EE", "Trap": "#F87171",
+    "UK Bass / Garage": "#2DD4BF"
+  };
+  var MAIN_GENRES = Object.keys(GENRE_COLORS);
+  var WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
   }
-  function monthKey(d){
-    if(!d) return "Recurring";
-    var parts = d.split("-");
-    var dt = new Date(Number(parts[0]), Number(parts[1])-1, 1);
-    return dt.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  function parseDate(d){
+    var p = d.split("-");
+    return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
   }
+  function ymd(dt){
+    return dt.getFullYear() + "-" + String(dt.getMonth()+1).padStart(2,"0") + "-" + String(dt.getDate()).padStart(2,"0");
+  }
+  function addDays(d, n){ var dt = parseDate(d); dt.setDate(dt.getDate() + n); return ymd(dt); }
   // "Today" for filtering purposes is shifted 30 minutes late, so an event
   // dated today doesn't disappear right at midnight -- it stays up until
   // 12:30 AM the following day, since people sometimes head out last-minute.
-  function todayStr(){
-    var d = new Date(Date.now() - 30 * 60 * 1000);
-    var m = String(d.getMonth()+1).padStart(2,"0");
-    var day = String(d.getDate()).padStart(2,"0");
-    return d.getFullYear() + "-" + m + "-" + day;
+  function todayStr(){ return ymd(new Date(Date.now() - 30 * 60 * 1000)); }
+  // Friday through Sunday of the current week (from today if it's already the weekend).
+  function weekendRange(today){
+    var dow = parseDate(today).getDay();
+    if(dow === 0) return [today, today];
+    var fri = dow >= 5 ? today : addDays(today, 5 - dow);
+    return [fri, addDays(today, 7 - dow)];
+  }
+  // "9:00 PM" -> "9 PM", "2:00 AM - 5:00 AM" -> "2–5 AM"
+  function shortTime(t){
+    if(!t) return "";
+    var s = t.replace(/:00/g, "").replace(/\s*-\s*/g, "–");
+    var m = s.match(/^(\d+(?::\d+)?)\s*(AM|PM)–(\d+(?::\d+)?)\s*(AM|PM)$/i);
+    return m && m[2].toUpperCase() === m[4].toUpperCase() ? m[1] + "–" + m[3] + " " + m[4].toUpperCase() : s;
+  }
+  // Split a lineup off titles that already list one ("X ft. A, B", "X w/ A", "X | A + B").
+  function splitTitle(artist){
+    var m = artist.match(/^(.+?)\s+(?:ft\.?|feat\.?|w\/)\s+(.+)$/i) || artist.match(/^(.+?)\s+\|\s+(.+)$/);
+    return m ? {title: m[1], lineup: m[2]} : {title: artist, lineup: ""};
+  }
+  function venueName(e){ return VENUES[e.venue] ? VENUES[e.venue].name : e.venue; }
+  function imgTag(e, extraClass){
+    // Cards show the event's own flyer, else the venue's logo -- never a
+    // made-up graphic. imgFallback() walks this chain on load errors.
+    var venueImage = VENUES[e.venue] && VENUES[e.venue].image;
+    var chain = [e.image, venueImage].filter(function(u, i, a){ return u && a.indexOf(u) === i; });
+    if(!chain.length) return "";
+    // focus = where the face is in the flyer (set by the updater).
+    var style = (e.focus && e.image) ? ' style="object-position:' + esc(e.focus) + '"' : '';
+    return '<img src="' + esc(chain[0]) + '" alt="" loading="lazy"' + style +
+      ' data-fallbacks="' + esc(chain.slice(1).join("|")) + '" onerror="imgFallback(this)">';
+  }
+  function genrePill(g){
+    var c = GENRE_COLORS[g];
+    return c ? '<span class="pill" style="--c:' + c + '">' + esc(g) + '</span>' : '';
   }
 
   var venueSelect = document.getElementById("venueSelect");
   var genreSelect = document.getElementById("genreSelect");
   var searchInput = document.getElementById("searchInput");
   var eventsContainer = document.getElementById("eventsContainer");
-  var closedNote = document.getElementById("closedNote");
-  var lastUpdatedEl = document.getElementById("lastUpdated");
+  var weeklyContainer = document.getElementById("weeklyContainer");
+  var weeklySection = document.getElementById("every-week");
+  var monthTabs = document.getElementById("monthTabs");
 
-  lastUpdatedEl.textContent = typeof LAST_UPDATED !== "undefined" ? LAST_UPDATED : "";
-  closedNote.textContent = typeof CLOSED_VENUES_NOTE !== "undefined" ? CLOSED_VENUES_NOTE : "";
+  document.getElementById("lastUpdated").textContent = typeof LAST_UPDATED !== "undefined" ? LAST_UPDATED : "";
+  document.getElementById("closedNote").textContent = typeof CLOSED_VENUES_NOTE !== "undefined" ? CLOSED_VENUES_NOTE : "";
+  if(SUBMIT_EVENT_URL){
+    document.getElementById("submitLink").href = SUBMIT_EVENT_URL;
+    document.getElementById("menuSubmit").href = SUBMIT_EVENT_URL;
+  }
 
+  // Menu
+  var menuBtn = document.getElementById("menuBtn"), menuPanel = document.getElementById("menuPanel");
+  function setMenu(open){ menuPanel.hidden = !open; menuBtn.setAttribute("aria-expanded", String(open)); }
+  menuBtn.addEventListener("click", function(ev){ ev.stopPropagation(); setMenu(menuPanel.hidden); });
+  document.addEventListener("click", function(ev){ if(!menuPanel.contains(ev.target)) setMenu(false); });
+  document.addEventListener("keydown", function(ev){ if(ev.key === "Escape") setMenu(false); });
+
+  // Venue / genre chips (native selects under the chip, so they work everywhere)
   Object.keys(VENUES)
     .filter(function(key){ return !VENUES[key].closed; })
     .sort(function(a,b){ return VENUES[a].name.localeCompare(VENUES[b].name); })
     .forEach(function(key){
       var opt = document.createElement("option");
-      opt.value = key;
-      opt.textContent = VENUES[key].name;
+      opt.value = key; opt.textContent = VENUES[key].name;
       venueSelect.appendChild(opt);
     });
-
-  // The site's main genres, alphabetical; only those with at least one event are listed.
-  var MAIN_GENRES = ["Bass", "Downtempo", "Drum & Bass", "Dubstep", "Hard Dance",
-                     "House", "Techno", "Trance", "Trap", "UK Bass / Garage"];
+  // Only genres with at least one event are listed.
   MAIN_GENRES.filter(function(g){
     return EVENTS.some(function(e){ return e.genre === g; });
   }).forEach(function(g){
@@ -233,47 +348,39 @@ function imgFallback(img){
     opt.value = g; opt.textContent = g;
     genreSelect.appendChild(opt);
   });
-
-  function cardHTML(e){
-    var venueName = VENUES[e.venue] ? VENUES[e.venue].name : e.venue;
-    // Cards show the event's own flyer, else the venue's logo -- never a
-    // made-up graphic. imgFallback() walks this chain on load errors.
-    var venueImage = VENUES[e.venue] && VENUES[e.venue].image;
-    // focus = where the face is in the flyer (set by the updater), so the
-    // strip shows the face instead of the middle of the image.
-    var focusStyle = (e.focus && e.image) ? ' style="object-position:' + e.focus + '"' : '';
-    var chain = [e.image, venueImage].filter(function(u, i, a){ return u && a.indexOf(u) === i; });
-    // Recurring series and free events only ever get the direct link -- no resale buttons.
-    var resaleLinks = (e.date && !e.free ? (e.resale||[]) : []).map(function(r){
-      return '<a class="btn btn-resale" href="' + r.url + '" target="_blank" rel="noopener">' + r.site + '</a>';
-    }).join("");
-    return (
-      '<div class="card">' +
-        '<div class="card-image">' +
-          (chain.length ? '<img src="' + chain[0] + '" alt="" loading="lazy"' + focusStyle + ' data-fallbacks="' + chain.slice(1).join("|") + '" onerror="imgFallback(this)">' : '') +
-          '<span class="genre-badge">' + (e.genre || "") + '</span>' +
-        '</div>' +
-        '<div class="card-body">' +
-          '<div class="card-artist">' + e.artist + '</div>' +
-          '<div class="card-meta">' + (e.recurring ? e.recurring : fmtDate(e.date)) + (e.time ? " &middot; " + e.time : "") + '</div>' +
-          '<div class="card-venue">' + venueName + '</div>' +
-          '<div class="card-actions">' +
-            '<a class="btn btn-direct" href="' + e.direct + '" target="_blank" rel="noopener">' + (e.free ? 'Free &middot; Event Info' : 'Buy Direct') + '</a>' +
-            resaleLinks +
-          '</div>' +
-        '</div>' +
-      '</div>'
-    );
+  function syncSelectChip(select, chipId, labelId, fallback){
+    var on = !!select.value;
+    document.getElementById(chipId).classList.toggle("active", on);
+    document.getElementById(labelId).textContent = on ? select.options[select.selectedIndex].text : fallback;
   }
 
-  // Month tabs: picking a month shows only that month's events (no recurring
-  // section) until "All" or another month is picked.
+  // Tonight / This weekend (one at a time) and Free
+  var whenFilter = "";
+  var freeOnly = false;
+  var whenChips = document.querySelectorAll(".chip[data-when]");
+  var freeChip = document.getElementById("freeChip");
+  function syncToggleChips(){
+    whenChips.forEach(function(c){
+      var on = c.getAttribute("data-when") === whenFilter;
+      c.classList.toggle("active", on); c.setAttribute("aria-pressed", String(on));
+    });
+    freeChip.classList.toggle("active", freeOnly); freeChip.setAttribute("aria-pressed", String(freeOnly));
+  }
+  whenChips.forEach(function(c){
+    c.addEventListener("click", function(){
+      var w = c.getAttribute("data-when");
+      whenFilter = whenFilter === w ? "" : w;
+      syncToggleChips(); render();
+    });
+  });
+  freeChip.addEventListener("click", function(){ freeOnly = !freeOnly; syncToggleChips(); render(); });
+
+  // Month row: picking a month shows only that month's events until "All" or
+  // another month is picked. Every month from first to last is listed, so the
+  // site never skips one (e.g. shows March without February).
   var startMonth = "";
-  // Every month from first to last, so the site never skips one (e.g. shows
-  // March 2027 without February) even when a month has no events yet.
   function monthRange(first, last){
-    var out = [];
-    var y = Number(first.slice(0,4)), m = Number(first.slice(5,7));
+    var out = [], y = Number(first.slice(0,4)), m = Number(first.slice(5,7));
     while(true){
       var ym = y + "-" + String(m).padStart(2,"0");
       out.push(ym);
@@ -282,14 +389,17 @@ function imgFallback(img){
     }
     return out;
   }
-  function monthLabel(ym){
+  function monthShort(ym){
     var dt = new Date(Number(ym.slice(0,4)), Number(ym.slice(5,7))-1, 1);
-    return dt.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+    var label = dt.toLocaleDateString("en-US",{month:"short"}).toUpperCase();
+    return Number(ym.slice(0,4)) !== new Date().getFullYear() ? label + " ’" + ym.slice(2,4) : label;
   }
-  var monthTabs = document.getElementById("monthTabs");
+  function monthLong(ym){
+    return new Date(Number(ym.slice(0,4)), Number(ym.slice(5,7))-1, 1)
+      .toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  }
   function renderMonthTabs(){
-    var todayKey = todayStr();
-    var months = [];
+    var todayKey = todayStr(), months = [];
     EVENTS.forEach(function(e){
       if(!e.date || e.date < todayKey) return;
       var ym = e.date.slice(0, 7);
@@ -298,87 +408,131 @@ function imgFallback(img){
     months.sort();
     if(months.length) months = monthRange(months[0], months[months.length-1]);
     if(startMonth && months.indexOf(startMonth) === -1) startMonth = "";
-    var tabs = [{ym:"", label:"All"}].concat(months.map(function(ym){
-      var dt = new Date(Number(ym.slice(0,4)), Number(ym.slice(5,7))-1, 1);
-      return {ym:ym, label:dt.toLocaleDateString("en-US",{month:"short",year:"numeric"})};
-    }));
-    monthTabs.innerHTML = tabs.map(function(t){
-      return '<button type="button" class="month-tab' + (t.ym === startMonth ? ' active' : '') + '" data-month="' + t.ym + '">' + t.label + '</button>';
-    }).join('<span class="month-sep" aria-hidden="true">|</span>');
+    monthTabs.innerHTML = [{ym:"", label:"ALL"}].concat(months.map(function(ym){
+      return {ym:ym, label:monthShort(ym)};
+    })).map(function(t){
+      var on = t.ym === startMonth;
+      return '<button type="button" class="month' + (on ? ' active' : '') + '" data-month="' + t.ym + '"' +
+        (on ? ' aria-current="true"' : '') + '>' + t.label + '</button>';
+    }).join("");
   }
   monthTabs.addEventListener("click", function(ev){
-    var btn = ev.target.closest(".month-tab");
+    var btn = ev.target.closest(".month");
     if(!btn) return;
     var ym = btn.getAttribute("data-month");
     if(ym === startMonth) return;
     startMonth = ym;
-    renderMonthTabs();
-    render();
+    renderMonthTabs(); render();
+    btn = monthTabs.querySelector('.month[data-month="' + ym + '"]');
+    if(btn) btn.scrollIntoView({block:"nearest", inline:"center"});
   });
 
-  function render(){
-    var venueFilter = venueSelect.value;
-    var genreFilter = genreSelect.value;
-    var q = searchInput.value.trim().toLowerCase();
-    var todayKey = todayStr();
-
-    var filtered = EVENTS.filter(function(e){
-      if(e.date && e.date < todayKey) return false;
-      if(startMonth && (!e.date || e.date.slice(0, 7) !== startMonth)) return false;
-      if(venueFilter && e.venue !== venueFilter) return false;
-      if(genreFilter && e.genre !== genreFilter) return false;
-      if(q){
-        var venueName = VENUES[e.venue] ? VENUES[e.venue].name.toLowerCase() : "";
-        if(e.artist.toLowerCase().indexOf(q)===-1 && venueName.indexOf(q)===-1) return false;
-      }
-      return true;
-    });
-
-    filtered.sort(function(a,b){
-      if(!a.date && !b.date) return 0;
-      if(!a.date) return -1;
-      if(!b.date) return 1;
-      return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
-    });
-
-    var groups = [];
-    var groupMap = {};
-    filtered.forEach(function(e){
-      var mk = monthKey(e.date);
-      if(!groupMap[mk]){
-        groupMap[mk] = [];
-        groups.push(mk);
-      }
-      groupMap[mk].push(e);
-    });
-
-    // Fill in months with no events between the first and last month shown
-    // (or show the picked month even if it's empty).
-    var dated = filtered.filter(function(e){ return e.date; }).map(function(e){ return e.date.slice(0,7); });
-    var fillMonths = startMonth ? [startMonth]
-      : (dated.length ? monthRange(dated[0], dated[dated.length-1]) : []);
-    var ordered = groups.indexOf("Recurring") !== -1 ? ["Recurring"] : [];
-    fillMonths.forEach(function(ym){
-      var mk = monthLabel(ym);
-      if(!groupMap[mk]) groupMap[mk] = [];
-      ordered.push(mk);
-    });
-
-    var html = "";
-    ordered.forEach(function(mk){
-      html += '<div class="month-header">' + mk + '</div>';
-      html += groupMap[mk].length
-        ? '<div class="grid">' + groupMap[mk].map(cardHTML).join("") + '</div>'
-        : '<p class="month-empty">No events announced yet.</p>';
-    });
-    if(!filtered.length && !startMonth){
-      html = '<p style="color:var(--muted);padding:40px 0;">No events match your filters.</p>';
+  function cardHTML(e){
+    var t = splitTitle(e.artist);
+    var meta = [shortTime(e.time), venueName(e), e.price].filter(Boolean).map(esc).join(" &middot; ");
+    var actions;
+    if(e.free){
+      actions = '<a class="info-link" href="' + esc(e.direct) + '" target="_blank" rel="noopener">Event info &rarr;</a>';
+    } else {
+      var resale = (e.resale || []).map(function(r){
+        return '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.site) + '</a>';
+      }).join(" &middot; ");
+      actions = '<a class="btn-tickets" href="' + esc(e.direct) + '" target="_blank" rel="noopener">Tickets</a>' +
+        (resale ? '<span class="resale">' + resale + '</span>' : '');
     }
-    eventsContainer.innerHTML = html;
+    return (
+      '<article class="ev">' +
+        '<div class="thumb">' + imgTag(e) + '</div>' +
+        '<div class="ev-body">' +
+          '<div class="tags">' + genrePill(e.genre) + (e.free ? '<span class="pill free">FREE</span>' : '') + '</div>' +
+          '<div class="ev-title">' + esc(t.title) + '</div>' +
+          (t.lineup ? '<div class="lineup">' + esc(t.lineup) + '</div>' : '') +
+          '<div class="meta">' + meta + '</div>' +
+          '<div class="actions">' + actions + '</div>' +
+        '</div>' +
+      '</article>'
+    );
   }
 
-  venueSelect.addEventListener("change", render);
-  genreSelect.addEventListener("change", render);
+  // "Weekly on Sundays" -> "SUNDAYS", "Every Friday & Saturday" -> "FRIDAYS & SATURDAYS"
+  function weeklyDays(e){
+    var days = WEEKDAYS.filter(function(d){ return new RegExp(d, "i").test(e.recurring || ""); });
+    return days.length ? days.map(function(d){ return d.toUpperCase() + "S"; }).join(" & ") : (e.recurring || "").toUpperCase();
+  }
+  function weeklyHTML(e){
+    // Recurring series only ever link to the venue directly -- no resale.
+    return (
+      '<a class="wk" href="' + esc(e.direct) + '" target="_blank" rel="noopener">' +
+        '<div class="wk-img">' + imgTag(e) + '</div>' +
+        '<div class="wk-body">' +
+          '<div class="wk-when">' + esc(weeklyDays(e)) + (e.time ? ' &middot; ' + esc(shortTime(e.time)) : '') + '</div>' +
+          '<div class="wk-title">' + esc(e.artist) + '</div>' +
+          '<div class="wk-venue">' + esc(venueName(e)) + '</div>' +
+        '</div>' +
+      '</a>'
+    );
+  }
+
+  function matchesCommon(e, q){
+    if(venueSelect.value && e.venue !== venueSelect.value) return false;
+    if(genreSelect.value && e.genre !== genreSelect.value) return false;
+    if(q){
+      var hay = (e.artist + " " + venueName(e)).toLowerCase();
+      if(hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  }
+
+  function render(){
+    var q = searchInput.value.trim().toLowerCase();
+    var todayKey = todayStr(), tomorrowKey = addDays(todayKey, 1);
+    var range = whenFilter === "tonight" ? [todayKey, todayKey]
+              : whenFilter === "weekend" ? weekendRange(todayKey) : null;
+
+    var dated = EVENTS.filter(function(e){
+      if(!e.date || e.date < todayKey) return false;
+      if(startMonth && e.date.slice(0, 7) !== startMonth) return false;
+      if(range && (e.date < range[0] || e.date > range[1])) return false;
+      if(freeOnly && !e.free) return false;
+      return matchesCommon(e, q);
+    }).sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+
+    var byDay = {};
+    dated.forEach(function(e){ (byDay[e.date] = byDay[e.date] || []).push(e); });
+
+    // Month sections from the first to the last month shown (or just the
+    // picked month), each with its day groups; empty months still appear.
+    var months = startMonth ? [startMonth]
+      : (dated.length && !range ? monthRange(dated[0].date.slice(0,7), dated[dated.length-1].date.slice(0,7)) : []);
+    if(range && dated.length) months = dated.map(function(e){ return e.date.slice(0,7); })
+      .filter(function(m, i, a){ return a.indexOf(m) === i; });
+
+    var html = "";
+    months.forEach(function(ym){
+      html += '<h2 class="month-head">' + esc(monthLong(ym)) + '</h2>';
+      var days = Object.keys(byDay).filter(function(d){ return d.slice(0,7) === ym; }).sort();
+      if(!days.length){ html += '<p class="empty">No events announced yet.</p>'; return; }
+      days.forEach(function(d){
+        var n = byDay[d].length;
+        var soon = d === todayKey ? "TONIGHT" : d === tomorrowKey ? "TOMORROW" : "";
+        html += '<div class="day-head"><h3>' + esc(parseDate(d).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})) + '</h3>' +
+          '<span class="day-count">' + (soon ? '<span class="soon">' + soon + '</span> &middot; ' : '') + n + (n === 1 ? ' SHOW' : ' SHOWS') + '</span></div>' +
+          '<div class="cards">' + byDay[d].map(cardHTML).join("") + '</div>';
+      });
+    });
+    if(!dated.length && !startMonth){
+      html = '<p class="no-results">No shows match these filters.</p>';
+    }
+    eventsContainer.innerHTML = html;
+
+    // Every week: hidden while a specific month or date/free filter is on.
+    var weekly = (startMonth || range || freeOnly) ? [] : EVENTS.filter(function(e){ return !e.date && matchesCommon(e, q); });
+    weeklySection.hidden = !weekly.length;
+    weeklyContainer.innerHTML = weekly.map(weeklyHTML).join("");
+  }
+
+  venueSelect.addEventListener("change", function(){ syncSelectChip(venueSelect, "venueChip", "venueLabel", "Venue"); render(); });
+  genreSelect.addEventListener("change", function(){ syncSelectChip(genreSelect, "genreChip", "genreLabel", "Genre"); render(); });
   searchInput.addEventListener("input", render);
 
   renderMonthTabs();

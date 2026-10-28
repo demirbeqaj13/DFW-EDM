@@ -386,6 +386,7 @@ tag or after the closing tag. Structure:
       "image": "https://... or null",
       "stubhub": "https://www.stubhub.com/.../event/<id>/ real verified listing URL, or null if not found",
       "free": "optional, true only when the listing says the event is free / no cover",
+      "price": "optional, the ticket price exactly as the listing shows it (e.g. '$25' or '$20-$45'), else null -- never estimate",
       "recurring": "optional string, only for undated recurring series like weekly nights"
     }}
   ]
@@ -642,6 +643,8 @@ def build_events_js(data: dict) -> str:
         resale_expr = f'resale({js_str(e["artist"])}, {js_str(venue_name)})'
         if e.get("free") is True:
             obj += ", free: true"
+        elif e.get("price"):
+            obj += f', price: {js_str(str(e["price"]))}'
         if not e.get("date") or e.get("free") is True:
             # Free events and recurring series (Haus Sundays, Ritual Fridays / Voltage
             # Saturdays) only ever link to the venue directly -- no resale.
