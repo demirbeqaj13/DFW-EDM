@@ -433,8 +433,8 @@ function imgFallback(img){
     return days.length ? days.map(function(d){ return d.toUpperCase() + "S"; }).join(" & ") : (e.recurring || "").toUpperCase();
   }
   function weeklyHTML(e){
-    // Recurring series only ever link to the venue directly -- no resale.
-    var label = /instagram\.com/i.test(e.direct || "") ? "Instagram" : "Tickets";
+    // Recurring series are usually free: "Event Info" to the venue / series
+    // page, never resale.
     return (
       '<article class="ev wk">' +
         '<div class="thumb square">' + imgTag(e) + '</div>' +
@@ -443,7 +443,7 @@ function imgFallback(img){
           '<div class="ev-title">' + esc(e.artist) + '</div>' +
           '<div class="wk-when">' + esc(weeklyDays(e)) + (e.time ? ' &middot; ' + esc(shortTime(e.time)) : '') + '</div>' +
           '<div class="meta">' + esc(venueName(e)) + '</div>' +
-          '<div class="actions"><a class="btn-tickets" href="' + esc(e.direct) + '" target="_blank" rel="noopener">' + label + '</a></div>' +
+          '<div class="actions"><a class="btn-tickets" href="' + esc(e.direct) + '" target="_blank" rel="noopener">Event Info</a></div>' +
         '</div>' +
       '</article>'
     );
