@@ -97,6 +97,8 @@ EVENT_CENTERED_VENUES = ["sounders"]
 NO_RESALE_VENUES = ["sounders"]
 
 VENUE_FALLBACK_IMAGES = {
+    # Club De Dior's only listings are Portal After Hours; use Portal's logo.
+    "clubdedior": "img/portal-after-hours.jpg",
     "silo": "https://silodallas.com/og-image.png",
     "ductwork": "https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png",
     "itlldo": "https://static1.squarespace.com/static/687877d212aabf1aafc5c893/t/687883bae925b43e83551a43/1752728506887/_ITLLDOCLUB.png?format=1500w",
@@ -139,7 +141,9 @@ PORTAL_RECURRING_EVENT = {
     "time": "1:30 AM - 5:00 AM",
     "genre": "House / Techno",
     "direct": "https://www.instagram.com/portalafterhours/",
-    "image": None,  # filled from the venue's logo
+    # Portal's logo (its Instagram profile picture), saved in the repo as a
+    # square: Instagram's own image links expire after a few days.
+    "image": "img/portal-after-hours.jpg",
     "recurring": "Every Friday & Saturday",
 }
 

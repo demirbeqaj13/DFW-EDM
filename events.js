@@ -18,7 +18,7 @@ const VENUES = {
   "coba": { name: "Coba (After Hours)", address: "2800 Canton St, Dallas, TX", site: "https://www.cobadallas.com/", image: "https://static.wixstatic.com/media/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg/v1/fit/w_2500,h_1330,al_c/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg" },
   "villagebeach": { name: "The Village Beach Club", address: "5670 Village Glen Dr, Dallas, TX 75206", site: "https://villagebeachclub.com/event-calendar/", image: null },
   "shyboy": { name: "Shyboy Hi-Fi", address: "1313 Main St, Dallas, TX 75202", site: "https://shyboyhifi.com/", image: "https://framerusercontent.com/images/XMFOUqT27uD43nsH5BldXfbUA.png" },
-  "clubdedior": { name: "Club De Dior", address: "3650 N Buckner Blvd, Dallas, TX", site: "https://www.instagram.com/portalafterhours/", image: null },
+  "clubdedior": { name: "Club De Dior", address: "3650 N Buckner Blvd, Dallas, TX", site: "https://www.instagram.com/portalafterhours/", image: "img/portal-after-hours.jpg" },
 };
 
 function resale(artist, venueCity) {
@@ -157,7 +157,7 @@ const EVENTS = [
   { artist: "Haus Sundays", venue: "ctrlroom", date: null, time: "10:00 PM", genre: "House", direct: "https://www.ctrlroomdallas.com/events", image: "https://cdn.prod.website-files.com/69c17a74a763699ce65b1b8d/69c24f01971e47d2420adc69_CTRL-OpenGraph.png", recurring: "Weekly on Sundays", resale: [] },
   { artist: "Beats Antique", venue: "deepellumartco", date: "2026-12-06", time: "7:00 PM", genre: "Bass", direct: "https://www.deepellumart.co/shows/beats-antique-06-dec#tickets", image: null, resale: resale("Beats Antique", "Deep Ellum Art Co") },
   { artist: "Ritual Fridays / Voltage Saturdays", venue: "coba", date: null, time: "2:00 AM - 5:00 AM", genre: "House", direct: "https://www.cobadallas.com/buytickets", image: "https://static.wixstatic.com/media/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg/v1/fit/w_2500,h_1330,al_c/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg", recurring: "Every Friday & Saturday", resale: [] },
-  { artist: "Portal After Hours", venue: "clubdedior", date: null, time: "1:30 AM - 5:00 AM", genre: "House", direct: "https://www.instagram.com/portalafterhours/", image: null, recurring: "Every Friday & Saturday", resale: [] },
+  { artist: "Portal After Hours", venue: "clubdedior", date: null, time: "1:30 AM - 5:00 AM", genre: "House", direct: "https://www.instagram.com/portalafterhours/", image: "img/portal-after-hours.jpg", recurring: "Every Friday & Saturday", resale: [] },
 ];
 
 const CLOSED_VENUES_NOTE = "Stereo Live Dallas closed permanently in early 2026 and is no longer booking shows. Kept here for reference only.";
