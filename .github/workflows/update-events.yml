@@ -9,6 +9,11 @@ on:
 permissions:
   contents: write
 
+# Shared with the daily site build so the two never push to main at once.
+concurrency:
+  group: edmdfw-main-writer
+  cancel-in-progress: false
+
 jobs:
   update-events:
     runs-on: ubuntu-latest
@@ -44,4 +49,8 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           cp "$RUNNER_TEMP/events.js" "$RUNNER_TEMP/events_data.json" .
-          git diff --quiet -- events.js events_data.json || (git add events.js events_data.json && git commit -m "Automated events update" && git push origin main)
+          # Rebuild the static pages (pre-rendered homepage listings, landing
+          # pages, sitemap) from the latest index.html and the new events.
+          python3 build_site.py
+          git add events.js events_data.json index.html sitemap.xml robots.txt this-weekend genres venues
+          git diff --cached --quiet || (git commit -m "Automated events update" && git push origin main)

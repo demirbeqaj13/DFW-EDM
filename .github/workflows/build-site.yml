@@ -1,0 +1,52 @@
+name: Build static pages
+
+# Rebuilds the pre-rendered homepage listings, landing pages and sitemap
+# (build_site.py, no API calls) so dates stay current between event
+# updates: "this weekend", "tonight", and past shows dropping off.
+on:
+  schedule:
+    # Daily at 10:17 UTC (~5am Central)
+    - cron: "17 10 * * *"
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - events.js
+      - build_site.py
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+# Shared with the events update so the two never push to main at once.
+concurrency:
+  group: edmdfw-main-writer
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build
+        run: python3 build_site.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "edmdfw-bot"
+          git config user.email "actions@github.com"
+          git add index.html sitemap.xml robots.txt this-weekend genres venues
+          # The sitemap's lastmod changes daily; only commit when a page did.
+          if git diff --cached --quiet -- index.html this-weekend genres venues robots.txt; then
+            echo "No page changes"; exit 0
+          fi
+          git commit -m "Rebuild static pages"
+          git pull --rebase origin main
+          git push origin main
