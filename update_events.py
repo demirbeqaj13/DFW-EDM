@@ -54,6 +54,7 @@ VENUES = {
     "coba": {"name": "Coba (After Hours)", "address": "2800 Canton St, Dallas, TX", "site": "https://www.cobadallas.com/"},
     "villagebeach": {"name": "The Village Beach Club", "address": "5670 Village Glen Dr, Dallas, TX 75206", "site": "https://villagebeachclub.com/event-calendar/"},
     "shyboy": {"name": "Shyboy Hi-Fi", "address": "1313 Main St, Dallas, TX 75202", "site": "https://shyboyhifi.com/"},
+    "clubdedior": {"name": "Club De Dior", "address": "3650 N Buckner Blvd, Dallas, TX", "site": "https://www.instagram.com/portalafterhours/"},
 }
 
 # Large, mixed-genre venues where a major touring EDM act can easily get lost
@@ -83,6 +84,8 @@ VENUE_SECONDARY_SOURCES = {
     # Sounders posts each night as a news post; H.A.M. Promotions (its
     # promoter) and ma.to list them too.
     "sounders": "https://soundersdallas.com/blogs/news + https://www.hampromos.com/blogs/news + https://ma.to/venue/soundersdallas",
+    # Portal After Hours (Club De Dior) sells through PNPresents / posh.vip and lists on RA.
+    "clubdedior": "https://www.instagram.com/portalafterhours/ + posh.vip and ra.co listings for \"Portal After Hours\"",
 }
 
 # Venues whose calendar is built around themed nights / series rather than
@@ -104,11 +107,12 @@ VENUE_FALLBACK_IMAGES = {
     "coba": "https://static.wixstatic.com/media/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg/v1/fit/w_2500,h_1330,al_c/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg",
 }
 
-# Coba runs two weekly after-hours nights (Ritual Fridays, Voltage Saturdays)
-# that the site shows as ONE combined recurring card. Research runs and the
-# carry-forward in merge_with_previous() tend to re-add them as separate
-# cards, so combine_coba_recurring() drops any separate undated Ritual /
-# Voltage entries and always emits exactly this one in their place.
+# Weekly after-hours series the site always shows as ONE fixed recurring
+# card each. Research runs and the carry-forward in merge_with_previous()
+# tend to re-add them as separate / reworded cards, so combine_fixed_weekly()
+# drops any undated entries for a series and emits exactly its card instead.
+# Coba runs two weekly nights (Ritual Fridays, Voltage Saturdays) shown as
+# one combined card.
 COBA_RECURRING_EVENT = {
     "artist": "Ritual Fridays / Voltage Saturdays",
     "venue": "coba",
@@ -120,6 +124,25 @@ COBA_RECURRING_EVENT = {
     "recurring": "Every Friday & Saturday",
 }
 COBA_RECURRING_NAMES = ("ritual", "voltage")
+
+# Portal After Hours: house / techno after-hours at Club De Dior, Friday and
+# Saturday nights 1:30-5 AM (most promoter posts; one Dallas Observer
+# listing also says Thursdays).
+PORTAL_RECURRING_EVENT = {
+    "artist": "Portal After Hours",
+    "venue": "clubdedior",
+    "date": None,
+    "time": "1:30 AM - 5:00 AM",
+    "genre": "House / Techno",
+    "direct": "https://www.instagram.com/portalafterhours/",
+    "image": None,  # filled from the venue's logo
+    "recurring": "Every Friday & Saturday",
+}
+
+FIXED_WEEKLY_SERIES = [
+    (COBA_RECURRING_EVENT, COBA_RECURRING_NAMES),
+    (PORTAL_RECURRING_EVENT, ("portal",)),
+]
 
 # Card images must be real: the event's own promotional flyer, or failing that
 # the venue's own logo/brand graphic. Never a made-up or generic placeholder.
@@ -370,9 +393,11 @@ TASK:
    free or ticketed; besides its own site, check its Resident Advisor (ra.co) and ma.to listings. For a
    free event set "free": true and use the event's own listing page (venue site, RA or ma.to event page,
    copied verbatim) as "direct". Only set "free" when the listing actually says free / no cover.
-6a. Coba's weekly after-hours nights (Ritual Fridays and Voltage Saturdays) are added by the script
-   as a single combined recurring card -- do not include them in "events". Specific dated Coba shows
-   (a named guest DJ on a particular night) should still be included as normal.
+6a. Weekly after-hours series are added by the script as fixed recurring cards -- do not include them
+   in "events": Coba's Ritual Fridays / Voltage Saturdays, and Portal After Hours (Club De Dior,
+   Fridays & Saturdays). Specific dated shows at those venues (a named guest DJ, an anniversary or a
+   holiday special on a particular night) should still be included as normal, using that night's own
+   ticket page (e.g. posh.vip or RA for Portal) as "direct".
 7. For each event, find its promotional image: the event-specific flyer/artwork, normally the og:image
    meta tag of the individual ticket page. Never use a venue logo, a generic site banner, or an image
    from a different event. If you cannot find the event's own image, leave image as null -- the
@@ -420,7 +445,7 @@ tag or after the closing tag. Structure:
 </events_json>
 
 Be thorough but only include venue keys you actually checked. Today's date will be given in the user message.
-Keep the JSON compact (no extra whitespace/indentation) to conserve output tokens -- there are 16
+Keep the JSON compact (no extra whitespace/indentation) to conserve output tokens -- there are 17
 venues to cover and the full list can run to 100+ events, so verbose formatting risks running out of
 room before you finish.
 """
@@ -853,20 +878,21 @@ def dedupe_events(events, generic_images):
     return kept
 
 
-def combine_coba_recurring(events):
-    """Replace any separate undated Ritual Fridays / Voltage Saturdays cards
-    with the single combined COBA_RECURRING_EVENT card. Dated Coba shows (a
-    specific guest DJ on a given night) are left alone."""
-    def is_coba_weekly(e):
-        name = (e.get("artist") or "").lower()
-        return (
-            e.get("venue") == "coba"
-            and not e.get("date")
-            and any(n in name for n in COBA_RECURRING_NAMES)
-        )
-
-    kept = [e for e in events if not is_coba_weekly(e)]
-    kept.append(dict(COBA_RECURRING_EVENT))
+def combine_fixed_weekly(events):
+    """Replace any undated entries for each FIXED_WEEKLY_SERIES with that
+    series' single card. Dated shows at those venues (a named guest DJ or an
+    anniversary on a given night) are left alone."""
+    kept = list(events)
+    for card, names in FIXED_WEEKLY_SERIES:
+        kept = [
+            e for e in kept
+            if not (
+                e.get("venue") == card["venue"]
+                and not e.get("date")
+                and any(n in (e.get("artist") or "").lower() for n in names)
+            )
+        ]
+        kept.append(dict(card))
     return kept
 
 
@@ -1261,7 +1287,7 @@ def main():
     today_str = date.today().isoformat()
     previous_events = load_previous_events()
     data["events"] = merge_with_previous(data["events"], previous_events, today_str)
-    data["events"] = combine_coba_recurring(data["events"])
+    data["events"] = combine_fixed_weekly(data["events"])
     data["events"] = drop_undated_non_weekly(data["events"])
     data["venue_images"] = venue_logo_images()
     missing = fill_event_images(data["events"], data["venue_images"])

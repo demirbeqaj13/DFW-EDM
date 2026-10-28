@@ -150,21 +150,16 @@
   .info-link:hover{text-decoration:underline;}
 
   /* Every week carousel */
-  .weekly{margin-top:34px;}
-  .section-title{font-weight:700;font-size:20px;margin:0 0 12px;}
+  /* Weekly series sit at the top, right under the month row. */
+  .weekly{margin-top:18px;}
+  .section-title{font-weight:700;font-size:18px;margin:0 0 10px;}
   .carousel{display:flex;gap:10px;overflow-x:auto;padding:0 16px 4px;margin:0 -16px;scroll-snap-type:x mandatory;scroll-padding-inline:16px;scrollbar-width:none;}
   .carousel::-webkit-scrollbar{display:none;}
-  .wk{
-    flex:none;width:248px;scroll-snap-align:start;border-radius:14px;overflow:hidden;
-    background:var(--surface);border:1px solid var(--border);
-  }
-  .wk:hover{border-color:#3A3A4A;}
-  .wk-img{height:84px;background:#000;}
-  .wk-img img{width:100%;height:100%;object-fit:cover;display:block;}
-  .wk-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;}
-  .wk-when{font-weight:600;font-size:11.5px;letter-spacing:.6px;color:var(--pink);}
-  .wk-title{font-weight:700;font-size:15px;line-height:1.2;}
-  .wk-venue{font-size:13px;color:var(--sub);}
+  /* Weekly cards use the event-card layout (flyer left, details right),
+     with a square flyer since promo images are mostly square. */
+  .wk{flex:none;width:min(340px, 86vw);scroll-snap-align:start;}
+  .thumb.square{width:104px;height:104px;align-self:flex-start;}
+  .wk-when{font-weight:600;font-size:11.5px;letter-spacing:.6px;color:var(--pink);text-transform:uppercase;}
 
   .no-results{color:var(--sub);padding:36px 0;text-align:center;}
 
@@ -212,11 +207,11 @@
 </nav>
 
 <main class="wrap">
-  <section id="upcoming" aria-label="Upcoming shows"><div id="eventsContainer"></div></section>
   <section class="weekly" id="every-week" aria-labelledby="everyWeekTitle">
     <h2 class="section-title" id="everyWeekTitle">Every week</h2>
     <div class="carousel" id="weeklyContainer"></div>
   </section>
+  <section id="upcoming" aria-label="Upcoming shows"><div id="eventsContainer"></div></section>
 </main>
 
 <footer class="wrap">
@@ -438,16 +433,19 @@ function imgFallback(img){
     return days.length ? days.map(function(d){ return d.toUpperCase() + "S"; }).join(" & ") : (e.recurring || "").toUpperCase();
   }
   function weeklyHTML(e){
-    // Recurring series only ever link to the venue directly -- no resale.
+    // Recurring series are usually free: "Event Info" to the venue / series
+    // page, never resale.
     return (
-      '<a class="wk" href="' + esc(e.direct) + '" target="_blank" rel="noopener">' +
-        '<div class="wk-img">' + imgTag(e) + '</div>' +
-        '<div class="wk-body">' +
+      '<article class="ev wk">' +
+        '<div class="thumb square">' + imgTag(e) + '</div>' +
+        '<div class="ev-body">' +
+          '<div class="tags">' + genrePill(e.genre) + '</div>' +
+          '<div class="ev-title">' + esc(e.artist) + '</div>' +
           '<div class="wk-when">' + esc(weeklyDays(e)) + (e.time ? ' &middot; ' + esc(shortTime(e.time)) : '') + '</div>' +
-          '<div class="wk-title">' + esc(e.artist) + '</div>' +
-          '<div class="wk-venue">' + esc(venueName(e)) + '</div>' +
+          '<div class="meta">' + esc(venueName(e)) + '</div>' +
+          '<div class="actions"><a class="btn-tickets" href="' + esc(e.direct) + '" target="_blank" rel="noopener">Event Info</a></div>' +
         '</div>' +
-      '</a>'
+      '</article>'
     );
   }
 
