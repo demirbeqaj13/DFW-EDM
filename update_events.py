@@ -89,6 +89,10 @@ VENUE_SECONDARY_SOURCES = {
 # named headliners. Research must list those nights even with no DJ named.
 EVENT_CENTERED_VENUES = ["sounders"]
 
+# Venues with no meaningful resale market: their shows only ever get the
+# direct link (no SeatGeek / StubHub), and the StubHub pass skips them.
+NO_RESALE_VENUES = ["sounders"]
+
 VENUE_FALLBACK_IMAGES = {
     "silo": "https://silodallas.com/og-image.png",
     "ductwork": "https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png",
@@ -640,6 +644,8 @@ def build_events_js(data: dict) -> str:
         parts.append(f'image: {js_str(venue_images.get(key))}')
         if v.get("closed"):
             parts.append("closed: true")
+        if key in NO_RESALE_VENUES:
+            parts.append("noResale: true")
         lines.append(f'  "{key}": {{ {", ".join(parts)} }},')
     lines.append("};")
     lines.append("")
@@ -671,9 +677,9 @@ def build_events_js(data: dict) -> str:
             obj += ", free: true"
         elif e.get("price"):
             obj += f', price: {js_str(str(e["price"]))}'
-        if not e.get("date") or e.get("free") is True:
-            # Free events and recurring series (Haus Sundays, Ritual Fridays / Voltage
-            # Saturdays) only ever link to the venue directly -- no resale.
+        if not e.get("date") or e.get("free") is True or venue_key in NO_RESALE_VENUES:
+            # Free events, recurring series (Haus Sundays, Ritual Fridays / Voltage
+            # Saturdays) and NO_RESALE_VENUES only ever link directly -- no resale.
             resale_expr = "[]"
         elif e.get("stubhub"):
             resale_expr += f'.concat([{{ site: "StubHub", url: {js_str(e["stubhub"])} }}])'
@@ -1307,6 +1313,7 @@ def main():
         e for e in data["events"]
         if not e.get("stubhub") and e.get("date") and today_str <= e["date"] <= cutoff_str
         and e.get("free") is not True
+        and e.get("venue") not in NO_RESALE_VENUES
         and not checked_recently(e, "stubhub_checked", STUBHUB_RECHECK_DAYS, today_str)
     ]
     recently_checked = sum(
