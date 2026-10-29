@@ -147,11 +147,8 @@
     display:flex;gap:14px;padding:10px;border-radius:16px;
     background:var(--surface);border:1px solid var(--border);
   }
-  .thumb{position:relative;width:96px;height:120px;flex:none;border-radius:12px;overflow:hidden;background:#000;}
-  /* The whole flyer fits inside the box (nothing cropped); a blurred, dimmed
-     copy of it fills whatever space is left around it. */
-  .thumb img{position:relative;width:100%;height:100%;object-fit:contain;display:block;}
-  .thumb img.backdrop{position:absolute;inset:0;object-fit:cover;filter:blur(10px) brightness(.5);transform:scale(1.25);}
+  .thumb{width:96px;height:120px;flex:none;border-radius:12px;overflow:hidden;background:#000;}
+  .thumb img{width:100%;height:100%;object-fit:cover;object-position:50% 25%;display:block;}
   .ev-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px;padding:2px 2px 0 0;}
   .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
   .pill{
@@ -269,6 +266,7 @@
 function imgFallback(img){
   var rest = (img.getAttribute("data-fallbacks") || "").split("|").filter(Boolean);
   if(!rest.length){ img.onerror = null; img.style.visibility = "hidden"; return; }
+  img.style.objectPosition = "";  // focus was for the flyer, not the venue logo
   img.setAttribute("data-fallbacks", rest.slice(1).join("|"));
   img.src = rest[0];
 }
@@ -340,9 +338,10 @@ function imgFallback(img){
     var venueImage = VENUES[e.venue] && VENUES[e.venue].image;
     var chain = [e.image, venueImage].filter(function(u, i, a){ return u && a.indexOf(u) === i; });
     if(!chain.length) return "";
-    var attrs = ' src="' + esc(chain[0]) + '" alt="" loading="lazy"' +
+    // focus = where the face is in the flyer (set by the updater).
+    var style = (e.focus && e.image) ? ' style="object-position:' + esc(e.focus) + '"' : '';
+    return '<img src="' + esc(chain[0]) + '" alt="" loading="lazy"' + style +
       ' data-fallbacks="' + esc(chain.slice(1).join("|")) + '" onerror="imgFallback(this)">';
-    return '<img class="backdrop" aria-hidden="true"' + attrs + '<img' + attrs;
   }
   function genrePill(g){
     var c = GENRE_COLORS[g];

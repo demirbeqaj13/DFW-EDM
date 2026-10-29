@@ -3,7 +3,9 @@ name: Build static pages
 # Rebuilds the SEO landing pages, sitemap and the homepage's <head> SEO
 # block (build_site.py, no API calls) so dates stay current between event
 # updates: "this weekend", "tonight", and past shows dropping off. The
-# homepage body is never touched.
+# homepage body is never touched. First frames any flyer whose card crop
+# hasn't been worked out yet (update_events.py --reframe: one small Claude
+# call per new flyer; nothing to do, no calls).
 on:
   schedule:
     # Daily at 10:17 UTC (~5am Central)
@@ -14,6 +16,7 @@ on:
       - index.html
       - events.js
       - build_site.py
+      - update_events.py
   workflow_dispatch: {}
 
 permissions:
@@ -36,6 +39,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install dependencies
+        run: pip install anthropic "opencv-python-headless==4.10.0.84"
+
+      - name: Frame new flyers
+        # Never let a framing problem block the daily page rebuild.
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 update_events.py --reframe
+
       - name: Build
         run: python3 build_site.py
 
@@ -43,11 +56,11 @@ jobs:
         run: |
           git config user.name "edmdfw-bot"
           git config user.email "actions@github.com"
-          git add index.html sitemap.xml robots.txt dallas-edm-events this-weekend genres venues
+          git add events.js events_data.json index.html sitemap.xml robots.txt dallas-edm-events this-weekend genres venues
           # The sitemap's lastmod changes daily; only commit when a page did.
-          if git diff --cached --quiet -- index.html dallas-edm-events this-weekend genres venues robots.txt; then
+          if git diff --cached --quiet -- events.js events_data.json index.html dallas-edm-events this-weekend genres venues robots.txt; then
             echo "No page changes"; exit 0
           fi
-          git commit -m "Rebuild static pages"
+          git commit -m "Frame flyers and rebuild static pages"
           git pull --rebase origin main
           git push origin main
