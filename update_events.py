@@ -14,6 +14,7 @@ Run manually to test:
   ANTHROPIC_API_KEY=sk-ant-... python3 update_events.py
 """
 
+import base64
 import html
 import json
 import os
@@ -194,10 +195,17 @@ FIXED_WEEKLY_SERIES = [
 OG_FETCH_TIMEOUT = 20
 OG_FETCH_WORKERS = 8
 
-# Event cards are a short, wide strip, so tall flyers are cropped top and
-# bottom. detect_face_focus() finds faces in each event flyer and stores an
-# object-position ("x% y%") so the visible strip lands on the face. The image
-# itself is never modified -- only which part of it the card shows.
+# Card thumbnails are a fixed 4:5 box the flyer fills, so flyers of other
+# shapes get cropped. detect_focus() has Claude find where the act's name is
+# printed on each flyer (once per flyer), finds faces (OpenCV), and stores
+# an object-position ("x% y%") that keeps the name in view -- and the face too
+# where both fit. The image itself is never modified -- only which part of it
+# the card shows.
+THUMB_ASPECT = 96 / 120          # .thumb in index.html (width / height)
+DEFAULT_FOCUS = (0.5, 0.25)      # the CSS default object-position, 50% 25%
+FOCUS_VERSION = "name-v1"        # bump to re-frame every flyer
+NAME_BOX_MAX_SIDE = 768          # flyer size sent to Claude (~600 image tokens)
+NAME_BOX_WORKERS = 4
 FACE_IMAGE_MAX_BYTES = 15_000_000
 FACE_DETECT_MAX_SIDE = 900
 
@@ -953,7 +961,7 @@ def _is_index_url(url):
 def dedupe_events(events, generic_images):
     """Drop duplicate listings of the same show, keeping the first one (this
     run's research comes before carried-forward events) and filling any
-    fields it's missing (flyer, StubHub link, face focus) from the others."""
+    fields it's missing (flyer, StubHub link, crop focus) from the others."""
     kept = []
     dropped = []
     for e in events:
@@ -1105,73 +1113,182 @@ def venue_logo_images():
     return images
 
 
-def detect_face_focus(image_url):
-    """Return "x% y%" centred on the faces in an image, or None if there are
-    no faces (or OpenCV isn't installed / the image can't be loaded)."""
-    try:
-        import cv2
-        import numpy as np
-    except ImportError:
-        return None
+def _load_image(image_url):
+    """The image as an OpenCV BGR array, or None."""
+    import cv2
+    import numpy as np
     try:
         req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=OG_FETCH_TIMEOUT) as resp:
             raw = resp.read(FACE_IMAGE_MAX_BYTES)
-        img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_GRAYSCALE)
+        return cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
     except Exception as exc:
-        print(f"Face check: could not load {image_url}: {exc}", file=sys.stderr)
-        return None
-    if img is None:
+        print(f"Focus check: could not load {image_url}: {exc}", file=sys.stderr)
         return None
 
+
+def find_faces_box(img):
+    """(left, top, right, bottom) around the main face(s), or None."""
+    import cv2
     h, w = img.shape[:2]
     scale = min(1.0, FACE_DETECT_MAX_SIDE / max(h, w))
+    small = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     if scale < 1.0:
-        img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-        h, w = img.shape[:2]
-    img = cv2.equalizeHist(img)
-    min_side = max(24, int(min(h, w) * 0.06))
-
+        small = cv2.resize(small, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+    small = cv2.equalizeHist(small)
+    min_side = max(24, int(min(small.shape[:2]) * 0.06))
     faces = []
     for cascade_name in ("haarcascade_frontalface_default.xml", "haarcascade_profileface.xml"):
         cascade = cv2.CascadeClassifier(os.path.join(cv2.data.haarcascades, cascade_name))
-        found = cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=6, minSize=(min_side, min_side))
+        found = cascade.detectMultiScale(small, scaleFactor=1.1, minNeighbors=6, minSize=(min_side, min_side))
         faces = [tuple(int(v) for v in f) for f in found]
         if faces:
             break
     if not faces:
         return None
-
     # Frame the main face(s): the largest one plus any others at least half its
     # size (e.g. a b2b duo), ignoring tiny background faces / false positives.
     largest = max(fw * fh for _, _, fw, fh in faces)
     main = [f for f in faces if f[2] * f[3] >= largest / 2]
-    left = min(x for x, _, _, _ in main)
-    top = min(y for _, y, _, _ in main)
-    right = max(x + fw for x, _, fw, _ in main)
-    bottom = max(y + fh for _, y, _, fh in main)
-    cx = round(100 * (left + right) / 2 / w)
-    cy = round(100 * (top + bottom) / 2 / h)
-    return f"{cx}% {cy}%"
+    return (min(x for x, _, _, _ in main) / scale, min(y for _, y, _, _ in main) / scale,
+            max(x + fw for x, _, fw, _ in main) / scale, max(y + fh for _, y, _, fh in main) / scale)
 
 
-def fill_face_focus(events, venue_images):
+NAME_BOX_SYSTEM_PROMPT = """You locate the performing act's name as printed on an event flyer.
+Given the flyer and the event title, find where the headlining act's name (or the event's own
+name when the title is a series/party name) is printed -- the big headline lettering, not a
+small credit, date line or ticket text. Give its bounding box as fractions of the image width
+and height (0 = left/top edge, 1 = right/bottom edge), covering every line of the name, a little
+generous rather than tight. If the name isn't printed on the flyer at all (e.g. a photo with no
+text, or only a venue logo), say found false.
+
+Reply with ONLY a JSON object between <box_json> and </box_json>:
+<box_json>{"found": true, "left": 0.08, "top": 0.62, "right": 0.93, "bottom": 0.78}</box_json>"""
+
+
+class FramingUnavailable(Exception):
+    """The flyer couldn't be checked this run (download or API failure)."""
+
+
+def find_name_box(client, img, artist):
+    """(left, top, right, bottom) in pixels around the act's name as printed
+    on the flyer, read by Claude; None if it's not printed / can't be read."""
+    import cv2
+    h, w = img.shape[:2]
+    scale = min(1.0, NAME_BOX_MAX_SIDE / max(h, w))
+    small = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA) if scale < 1.0 else img
+    ok, jpg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    if not ok:
+        return None
+    try:
+        response = tracked_create(
+            "name_framing",
+            client,
+            model=MODEL,
+            max_tokens=2000,
+            output_config={"effort": LOOKUP_EFFORT},
+            system=NAME_BOX_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
+                                             "data": base64.standard_b64encode(jpg.tobytes()).decode()}},
+                {"type": "text", "text": f"Event title: {artist}"},
+            ]}],
+        )
+    except Exception as exc:
+        print(f"Name framing hit an API error for {artist!r} (non-fatal): {exc}", file=sys.stderr)
+        raise FramingUnavailable from exc
+    text = "".join(b.text for b in response.content if getattr(b, "type", None) == "text")
+    match = re.search(r"<box_json>(.*?)</box_json>", text, re.S)
+    try:
+        box = json.loads(match.group(1)) if match else None
+        if not box or not box.get("found"):
+            return None
+        left, top, right, bottom = (min(1.0, max(0.0, float(box[k]))) for k in ("left", "top", "right", "bottom"))
+    except (ValueError, TypeError, KeyError):
+        return None
+    if right <= left or bottom <= top:
+        return None
+    return (left * w, top * h, right * w, bottom * h)
+
+
+def crop_position(w, h, name_box, face_box):
+    """object-position ("x% y%") for a w x h flyer filling a THUMB_ASPECT box:
+    the artist's name always inside the visible part when it fits, and as
+    close to the face(s) / the default framing as that allows."""
+    if w / h > THUMB_ASPECT:
+        axis, size, view = 0, w, h * THUMB_ASPECT   # wide: cropped left/right
+    else:
+        axis, size, view = 1, h, w / THUMB_ASPECT   # tall: cropped top/bottom
+    slack = size - view
+    if slack < size * 0.01 or not (name_box or face_box):
+        return None
+    span = lambda box: (box[axis], box[axis + 2])
+    clamp = lambda v, lo, hi: max(lo, min(hi, v))
+    preferred = slack * DEFAULT_FOCUS[axis]
+    if face_box:
+        a, b = span(face_box)
+        preferred = clamp((a + b) / 2 - view / 2, 0, slack)
+    if name_box:
+        a, b = span(name_box)
+        pad = min(view * 0.04, max(0, (view - (b - a)) / 2))  # a little breathing room
+        lo, hi = max(0, b + pad - view), min(slack, a - pad)
+        start = clamp(preferred, lo, hi) if lo <= hi else clamp((a + b) / 2 - view / 2, 0, slack)
+    else:
+        start = preferred
+    pct = round(100 * start / slack)
+    return f"{pct}% 50%" if axis == 0 else f"50% {pct}%"
+
+
+def detect_focus(client, image_url, artist):
+    """Where to crop an event's flyer in its card (see crop_position), or None
+    to use the default framing. Raises FramingUnavailable to retry next run."""
+    import cv2  # noqa: F401  (ImportError: the caller skips framing)
+    img = _load_image(image_url)
+    if img is None:
+        raise FramingUnavailable
+    h, w = img.shape[:2]
+    if abs(w / h - THUMB_ASPECT) < THUMB_ASPECT * 0.01:
+        return None  # already the card's shape: nothing is cropped
+    return crop_position(w, h, find_name_box(client, img, artist), find_faces_box(img))
+
+
+def focus_key(e):
+    return f'{e["image"]}|{FOCUS_VERSION}|{e.get("artist")}'
+
+
+def fill_focus(client, events, venue_images):
     """Set each event's "focus" for its current flyer. Only re-checks events
-    whose image changed since the focus was computed (tracked in focus_src)."""
+    whose flyer (or the method) changed since it was worked out (focus_src)."""
     generic = set(venue_images.values())
     todo = [
         e for e in events
-        if e.get("image") and e["image"] not in generic and e.get("focus_src") != e["image"]
+        if e.get("image") and e["image"] not in generic and e.get("focus_src") != focus_key(e)
         and e["image"].startswith("http")  # images stored in the repo are already framed
     ]
     if not todo:
         return
-    with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
-        results = list(pool.map(lambda e: detect_face_focus(e["image"]), todo))
-    for e, focus in zip(todo, results):
-        e["focus"] = focus
-        e["focus_src"] = e["image"]
-    print(f"Face check: found faces in {sum(1 for f in results if f)} of {len(todo)} new flyer(s).")
+    try:
+        import cv2  # noqa: F401
+    except ImportError:
+        print("Focus check skipped: OpenCV isn't installed.", file=sys.stderr)
+        return
+
+    def frame(e):
+        try:
+            return True, detect_focus(client, e["image"], e.get("artist"))
+        except FramingUnavailable:
+            return False, None  # not marked: tried again next run
+
+    with ThreadPoolExecutor(NAME_BOX_WORKERS) as pool:
+        results = list(pool.map(frame, todo))
+    for e, (done, focus) in zip(todo, results):
+        if done:
+            e["focus"] = focus
+            e["focus_src"] = focus_key(e)
+    framed = sum(1 for done, f in results if f)
+    retry = sum(1 for done, _ in results if not done)
+    print(f"Focus check: framed {framed} of {len(todo)} flyer(s) on the name / faces"
+          + (f"; {retry} to retry next run." if retry else "."))
 
 
 def needs_flyer(e, generic):
@@ -1371,6 +1488,43 @@ def drop_undated_non_weekly(events):
     return kept
 
 
+def current_venue_images():
+    """{venue key: image} as currently written in events.js."""
+    images = {}
+    try:
+        with open(OUTPUT_PATH, encoding="utf-8") as f:
+            for m in re.finditer(r'^\s*"(\w+)": \{.*?\bimage: ("(?:[^"\\]|\\.)*"|null)', f.read(), re.M):
+                if m.group(2) != "null":
+                    images[m.group(1)] = json.loads(m.group(2))
+    except OSError:
+        pass
+    return images
+
+
+def write_outputs(data, today_str):
+    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+        f.write(build_events_js(data))
+    with open(EVENTS_DATA_PATH, "w", encoding="utf-8") as f:
+        json.dump(
+            {"last_updated": data.get("last_updated", today_str), "events": data["events"]},
+            f,
+            ensure_ascii=False,
+            indent=None,
+        )
+
+
+def reframe_only(client):
+    """--reframe: work out the card crop for any flyer that needs it, using
+    the saved events (no research; only the per-flyer name check)."""
+    with open(EVENTS_DATA_PATH, encoding="utf-8") as f:
+        saved = json.load(f)
+    data = {"last_updated": saved.get("last_updated"), "events": saved["events"],
+            "venue_images": current_venue_images() or VENUE_FALLBACK_IMAGES}
+    fill_focus(client, data["events"], data["venue_images"])
+    print_usage_summary()
+    write_outputs(data, date.today().isoformat())
+
+
 def main():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -1378,6 +1532,9 @@ def main():
         sys.exit(1)
 
     client = anthropic.Anthropic(api_key=api_key)
+    if "--reframe" in sys.argv[1:]:
+        reframe_only(client)
+        return
     data = run_research(client)
 
     if not data.get("events"):
@@ -1412,7 +1569,7 @@ def main():
             if not e.get("image"):
                 e["image_checked"] = today_str
         print(f"Image lookup pass found {found} of {len(missing)} missing flyer(s).")
-    fill_face_focus(data["events"], data["venue_images"])
+    fill_focus(client, data["events"], data["venue_images"])
     data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
     # Genres: hand overrides win; vague research labels get a dedicated,
     # artist-by-artist check instead of a blind default; everything else maps
@@ -1461,18 +1618,7 @@ def main():
         found = sum(1 for e in needs_lookup if e.get("stubhub"))
         print(f"StubHub lookup pass found {found} link(s) out of {len(needs_lookup)} near-term event(s) checked.")
 
-    js = build_events_js(data)
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        f.write(js)
-
-    with open(EVENTS_DATA_PATH, "w", encoding="utf-8") as f:
-        json.dump(
-            {"last_updated": data.get("last_updated", today_str), "events": data["events"]},
-            f,
-            ensure_ascii=False,
-            indent=None,
-        )
-
+    write_outputs(data, today_str)
     print(f"Wrote {len(data['events'])} events to {OUTPUT_PATH}")
     print_usage_summary()
 
