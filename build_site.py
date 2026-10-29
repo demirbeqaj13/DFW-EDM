@@ -135,9 +135,10 @@ def img_tag(e, venues, base=""):
     if not chain:
         return ""
     chain = [asset(u, base) for u in chain]
-    style = f' style="object-position:{esc(e["focus"])}"' if e.get("focus") and e.get("image") else ""
-    return (f'<img src="{esc(chain[0])}" alt="" loading="lazy"{style}'
-            f' data-fallbacks="{esc("|".join(chain[1:]))}" onerror="imgFallback(this)">')
+    attrs = (f' src="{esc(chain[0])}" alt="" loading="lazy"'
+             f' data-fallbacks="{esc("|".join(chain[1:]))}" onerror="imgFallback(this)">')
+    # Blurred backdrop copy behind the fitted flyer, as on the homepage.
+    return f'<img class="backdrop" aria-hidden="true"{attrs}<img{attrs}'
 
 
 def genre_pill(g):
@@ -451,7 +452,6 @@ def landing_page(page, *, path, title, description, h1, intro, addr, events, ven
 function imgFallback(img){{
   var rest = (img.getAttribute("data-fallbacks") || "").split("|").filter(Boolean);
   if(!rest.length){{ img.onerror = null; img.style.visibility = "hidden"; return; }}
-  img.style.objectPosition = "";
   img.setAttribute("data-fallbacks", rest.slice(1).join("|"));
   img.src = rest[0];
 }}

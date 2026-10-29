@@ -144,8 +144,11 @@
     display:flex;gap:14px;padding:10px;border-radius:16px;
     background:var(--surface);border:1px solid var(--border);
   }
-  .thumb{width:96px;height:120px;flex:none;border-radius:12px;overflow:hidden;background:#000;}
-  .thumb img{width:100%;height:100%;object-fit:cover;object-position:50% 25%;display:block;}
+  .thumb{position:relative;width:96px;height:120px;flex:none;border-radius:12px;overflow:hidden;background:#000;}
+  /* The whole flyer fits inside the box (nothing cropped); a blurred, dimmed
+     copy of it fills whatever space is left around it. */
+  .thumb img{position:relative;width:100%;height:100%;object-fit:contain;display:block;}
+  .thumb img.backdrop{position:absolute;inset:0;object-fit:cover;filter:blur(10px) brightness(.5);transform:scale(1.25);}
   .ev-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px;padding:2px 2px 0 0;}
   .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
   .pill{
@@ -231,7 +234,7 @@
   <p class="intro">1 upcoming drum &amp; bass show at 1 venue.</p>
   
   
-  <section aria-label="Upcoming shows"><h2 class="month-head">December 2026</h2><div class="day-head"><h3>Thu, Dec 10</h3><span class="day-count">1 SHOW</span></div><div class="cards"><article class="ev"><div class="thumb"><img src="https://cdn.vor.us/event/659555/og/fafc208915ba42239448fdcabfff32ae.image!jpeg.615336.jpg.SQUARE(1).jpg" alt="" loading="lazy" data-fallbacks="https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png" onerror="imgFallback(this)"></div><div class="ev-body"><div class="tags"><span class="pill" style="--c:#A3E635">Drum &amp; Bass</span></div><div class="ev-title">Goldie</div><div class="meta">9 PM &middot; Ductwork at SILO</div><div class="actions"><a class="btn-tickets" href="https://wl.seetickets.us/event/Goldie-DALLAS/659555?afflky=DiscoPresents-Ductwork" target="_blank" rel="noopener">Tickets</a><span class="resale"><a href="https://seatgeek.com/search?search=Goldie%20Ductwork%20at%20SILO" target="_blank" rel="noopener">SeatGeek</a></span></div></div></article></div></section>
+  <section aria-label="Upcoming shows"><h2 class="month-head">December 2026</h2><div class="day-head"><h3>Thu, Dec 10</h3><span class="day-count">1 SHOW</span></div><div class="cards"><article class="ev"><div class="thumb"><img class="backdrop" aria-hidden="true" src="https://cdn.vor.us/event/659555/og/fafc208915ba42239448fdcabfff32ae.image!jpeg.615336.jpg.SQUARE(1).jpg" alt="" loading="lazy" data-fallbacks="https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png" onerror="imgFallback(this)"><img src="https://cdn.vor.us/event/659555/og/fafc208915ba42239448fdcabfff32ae.image!jpeg.615336.jpg.SQUARE(1).jpg" alt="" loading="lazy" data-fallbacks="https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png" onerror="imgFallback(this)"></div><div class="ev-body"><div class="tags"><span class="pill" style="--c:#A3E635">Drum &amp; Bass</span></div><div class="ev-title">Goldie</div><div class="meta">9 PM &middot; Ductwork at SILO</div><div class="actions"><a class="btn-tickets" href="https://wl.seetickets.us/event/Goldie-DALLAS/659555?afflky=DiscoPresents-Ductwork" target="_blank" rel="noopener">Tickets</a><span class="resale"><a href="https://seatgeek.com/search?search=Goldie%20Ductwork%20at%20SILO" target="_blank" rel="noopener">SeatGeek</a></span></div></div></article></div></section>
   <nav class="link-group" aria-label="Calendar"><h2>Calendar</h2><div class="link-row"><a href="/dallas-edm-events/">All Dallas EDM shows</a><a href="/this-weekend/">EDM events this weekend</a></div></nav><nav class="link-group" aria-label="Genres"><h2>Genres</h2><div class="link-row"><a href="/genres/bass/">DFW Bass</a><a href="/genres/downtempo/">DFW Downtempo</a><a href="/genres/drum-and-bass/" aria-current="page">DFW Drum &amp; Bass</a><a href="/genres/dubstep/">DFW Dubstep</a><a href="/genres/hard-dance/">DFW Hard Dance</a><a href="/genres/house/">DFW House</a><a href="/genres/techno/">DFW Techno</a><a href="/genres/trance/">DFW Trance</a><a href="/genres/trap/">DFW Trap</a><a href="/genres/uk-bass-garage/">DFW UK Bass / Garage</a></div></nav><nav class="link-group" aria-label="Venues"><h2>Venues</h2><div class="link-row"><a href="/venues/silo-dallas/">SILO Dallas</a><a href="/venues/itll-do-club/">It&#39;ll Do Club</a><a href="/venues/ctrl-room-dallas/">CTRL Room Dallas</a><a href="/venues/ductwork-at-silo/">Ductwork at SILO</a><a href="/venues/green-elephant/">Green Elephant</a><a href="/venues/sounders/">Sounders</a><a href="/venues/coba-after-hours/">Coba (After Hours)</a><a href="/venues/shyboy-hi-fi/">Shyboy Hi-Fi</a><a href="/venues/toyota-music-factory-the-pavilion/">Toyota Music Factory / The Pavilion</a><a href="/venues/dickies-arena/">Dickies Arena</a><a href="/venues/fair-park-dallas-festival/">Fair Park Dallas (Festival)</a><a href="/venues/club-de-dior/">Club De Dior</a><a href="/venues/deep-ellum-art-co/">Deep Ellum Art Co</a><a href="/venues/ruby-room/">Ruby Room</a><a href="/venues/the-studio-at-the-bomb-factory/">The Studio at The Bomb Factory</a></div></nav>
 </main>
 <footer class="wrap">
@@ -241,7 +244,6 @@
 function imgFallback(img){
   var rest = (img.getAttribute("data-fallbacks") || "").split("|").filter(Boolean);
   if(!rest.length){ img.onerror = null; img.style.visibility = "hidden"; return; }
-  img.style.objectPosition = "";
   img.setAttribute("data-fallbacks", rest.slice(1).join("|"));
   img.src = rest[0];
 }
