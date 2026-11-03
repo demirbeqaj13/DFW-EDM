@@ -15,6 +15,7 @@ const VENUES = {
   "dosequis": { name: "Dos Equis Pavilion", address: "3839 S Fitzhugh Ave, Dallas, TX", site: "https://www.dosequispavilion.com/events", image: null },
   "dickies": { name: "Dickies Arena", address: "1911 Montgomery St, Fort Worth, TX", site: "https://dickiesarena.com/events", image: null },
   "fairpark": { name: "Fair Park Dallas (Festival)", address: "1300 Robert B Cullum Blvd, Dallas, TX", site: "https://lightsallnight.com/", image: "https://2026-lightsallnight-com.imgix.net/2026/06/ef6c7bb0-meta.png?auto=compress,format" },
+  "pantherisland": { name: "Panther Island Pavilion (Festival)", address: "395 Purcey St, Fort Worth, TX", site: "https://ubbidubbifestival.com/", image: null },
   "coba": { name: "Coba (After Hours)", address: "2800 Canton St, Dallas, TX", site: "https://www.cobadallas.com/", image: "https://static.wixstatic.com/media/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg/v1/fit/w_2500,h_1330,al_c/37092d_88fc91f3ddb7491d96f5dfa270236b20~mv2.jpg" },
   "villagebeach": { name: "The Village Beach Club", address: "5670 Village Glen Dr, Dallas, TX 75206", site: "https://villagebeachclub.com/event-calendar/", image: null },
   "shyboy": { name: "Shyboy Hi-Fi", address: "1313 Main St, Dallas, TX 75202", site: "https://shyboyhifi.com/", image: "https://framerusercontent.com/images/XMFOUqT27uD43nsH5BldXfbUA.png" },

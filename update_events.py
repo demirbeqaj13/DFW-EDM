@@ -53,6 +53,8 @@ VENUES = {
     "dosequis": {"name": "Dos Equis Pavilion", "address": "3839 S Fitzhugh Ave, Dallas, TX", "site": "https://www.dosequispavilion.com/events"},
     "dickies": {"name": "Dickies Arena", "address": "1911 Montgomery St, Fort Worth, TX", "site": "https://dickiesarena.com/events"},
     "fairpark": {"name": "Fair Park Dallas (Festival)", "address": "1300 Robert B Cullum Blvd, Dallas, TX", "site": "https://lightsallnight.com/"},
+    # Ubbi Dubbi (each April; 2026 was Apr 24-25 at Panther Island Pavilion).
+    "pantherisland": {"name": "Panther Island Pavilion (Festival)", "address": "395 Purcey St, Fort Worth, TX", "site": "https://ubbidubbifestival.com/"},
     "coba": {"name": "Coba (After Hours)", "address": "2800 Canton St, Dallas, TX", "site": "https://www.cobadallas.com/"},
     "villagebeach": {"name": "The Village Beach Club", "address": "5670 Village Glen Dr, Dallas, TX 75206", "site": "https://villagebeachclub.com/event-calendar/"},
     "shyboy": {"name": "Shyboy Hi-Fi", "address": "1313 Main St, Dallas, TX 75202", "site": "https://shyboyhifi.com/"},
@@ -368,7 +370,9 @@ VENUES TO CHECK (use each venue's ticketing/events page as the source of truth):
 
 TASK:
 1. For each venue above, visit its events/ticketing page and list EVERY act on the calendar for the
-   next ~5 months from today -- do not pre-filter by reading the venue's own genre tag or category
+   next ~5 months from today (festival venues -- names ending in "(Festival)" -- are the exception:
+   list each festival day as soon as its dates are announced, however far out, one event per day
+   named like "Ubbi Dubbi 2027 (Day 1)", even before the lineup is out) -- do not pre-filter by reading the venue's own genre tag or category
    label. Venues like The Bomb Factory / The Studio at The Bomb Factory book a mix of genres on the
    same calendar, so genre must be judged per-artist, not per-venue.
 1a. PAGINATION -- many venue calendars (SILO Dallas via do214, and similar list-style pages) only show

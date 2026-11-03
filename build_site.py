@@ -601,7 +601,7 @@ def remove_stale(dirname, keep):
 # Concert halls, arenas, pavilions and festival grounds (the
 # /dallas-edm-concerts/ page) -- as opposed to clubs and after-hours rooms.
 CONCERT_VENUES = {"silo", "bombfactory", "studiofactory", "deepellumartco", "toyotamusic",
-                  "dosequis", "dickies", "fairpark"}
+                  "dosequis", "dickies", "fairpark", "pantherisland"}
 
 
 # Old addresses that now live elsewhere. GitHub Pages can't send real
