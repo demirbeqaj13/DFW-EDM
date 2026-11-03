@@ -23,7 +23,7 @@ import sys
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import anthropic
 
@@ -425,7 +425,12 @@ TASK:
    page has a track record of lagging behind it, so an event you only see on the secondary
    source is not a lower-confidence find -- add it the same as anything from the main site.
 6. For each event, capture: artist/event name, date (YYYY-MM-DD), time, a short genre label, and the
-   direct ticket purchase URL (the venue's own primary ticket link, not a resale site).
+   direct ticket purchase URL (the venue's own primary ticket link, not a resale site). Listing
+   sites (do214, JamBase, concertfix, concerts50, nextlvlevent, dallas-tx.events...) are fine for
+   FINDING shows but are never the "direct" link: follow them to the show's own ticket page. SILO and
+   Ductwork sell on SeeTickets (wl.seetickets.us/event/<NAME>/<id>, or Eventim's wl.eventim.us/event/...);
+   It'll Do Club sells on
+   Eventbrite (eventbrite.com/e/...-<id>).
 6c. EVENT-CENTERED VENUES -- {", ".join(VENUES[k]["name"] for k in EVENT_CENTERED_VENUES)}: these book
    themed nights and series (e.g. Sounders' "House on Levee St.", "Hard Wired", "Techno & Tequila",
    "Freakquency") more than named headliners. Include every upcoming electronic/dance night even when
@@ -885,7 +890,10 @@ def are_duplicate_events(a, b, generic_images):
     ticket link or flyer gives it away."""
     if a.get("venue") != b.get("venue") or a.get("date") != b.get("date") or not a.get("date"):
         return False
-    if a.get("direct") and _ticket_id(a.get("direct")) == _ticket_id(b.get("direct")):
+    # The same link only proves it's the same show when it's one show's page,
+    # not a venue's events page that several shows fall back to.
+    if (a.get("direct") and _ticket_id(a.get("direct")) == _ticket_id(b.get("direct"))
+            and not _is_index_url(a.get("direct"))):
         return True
     img_a, img_b = a.get("image"), b.get("image")
     if img_a and img_a == img_b and img_a not in generic_images:
@@ -954,6 +962,8 @@ def file_late_shows_under_night_before(events):
 
 def _is_index_url(url):
     """A venue's generic events / news / tickets page rather than one show's page."""
+    if url in VENUE_FALLBACK_LINKS:
+        return True
     path = re.sub(r"^https?://[^/]+", "", _ticket_id(url))
     return path in ("", "/") or bool(re.search(r"/(events?|shows|calendar|buytickets|tickets|blogs/news|pages/events-tickets)$", path))
 
@@ -1337,6 +1347,125 @@ def fill_event_images(events, venue_images):
     return still_missing
 
 
+# "Buy Direct" must open the venue's own ticket page for that show. Research
+# often lands on listing sites instead (do214, JamBase, concertfix,
+# nextlvlevent...), so fix_direct_links() swaps any link at these venues that
+# isn't on the venue's ticketing site for the show's real one, found from:
+# the Eventbrite ID inside the URL, the official link on the listing page
+# itself, or a name match on the venue's own listing pages. Failing all
+# three, it points at the venue's own events page -- never a listing site.
+_SEETICKETS_EVENT_LINK = re.compile(
+    r"https?://wl\.(?:seetickets|eventim)\.us/event/[^\"'\s<>/]+/\d+[^\"'\s<>]*", re.I)
+OFFICIAL_TICKET_LINKS = {
+    # Disco Presents venues: SeeTickets, now also its owner Eventim's white label.
+    "silo": {
+        "event": _SEETICKETS_EVENT_LINK,
+        "listings": ["https://wl.seetickets.us/SILO", "https://wl.eventim.us/silo",
+                     "https://silodallas.com/events", "https://silodallas.com/"],
+        "fallback": "https://silodallas.com/events",
+    },
+    "ductwork": {
+        "event": _SEETICKETS_EVENT_LINK,
+        "listings": ["https://wl.seetickets.us/DiscoPresents-Ductwork", "https://linktr.ee/ductworkdallas"],
+        "fallback": "https://wl.seetickets.us/DiscoPresents-Ductwork",
+    },
+    "itlldo": {
+        "event": re.compile(r"https?://(?:www\.)?eventbrite\.com/e/[^\"'\s<>?#]*?\d{9,}", re.I),
+        "listings": ["https://www.itlldoclub.com/", "https://linktr.ee/itlldoclub"],
+        "fallback": "https://www.itlldoclub.com/",
+    },
+}
+VENUE_FALLBACK_LINKS = {rules["fallback"] for rules in OFFICIAL_TICKET_LINKS.values()}
+_EVENTBRITE_ID = re.compile(r"(?:eventbrite\.com/e/(?:[^/?#]*-)?|eventbrite-)(\d{9,})", re.I)
+
+
+def official_links(page, venue):
+    """Every official event ticket link on a page, cleaned up, in page order."""
+    links = []
+    for m in OFFICIAL_TICKET_LINKS[venue]["event"].finditer(html.unescape(page or "").replace("\\/", "/")):
+        url = m.group(0)
+        if venue == "itlldo":
+            url = re.sub(r"[?#].*$", "", url)  # drop Eventbrite tracking (?aff=...)
+        if url not in links:
+            links.append(url)
+    return links
+
+
+def _link_words(url):
+    """Words of the show name in a ticket URL's slug."""
+    path = urlparse(url).path
+    slug = path.split("/event/")[-1] if "/event/" in path else path.split("/e/")[-1]
+    return set(re.findall(r"[a-z]+", slug.split("/")[0].lower())) - {"tickets", "dallas", "at", "itll", "do", "club", "silo"}
+
+
+def link_for_show(links, artist):
+    """The one link among `links` whose slug names this act, else None."""
+    want = {w for w in _name_words(artist) if len(w) >= 3 and w not in ("the", "presents", "tour")}
+    if not want:
+        return None
+    scored = [(len(want & _link_words(u)) / len(want), u) for u in links]
+    top = max((score for score, _ in scored), default=0)
+    best = [u for score, u in scored if score >= 0.6 and score == top]
+    # Several matches for different shows (e.g. two nights) -> can't tell which.
+    return best[0] if len({_show_id(u) for u in best}) == 1 else None
+
+
+def _show_id(url):
+    m = _EVENTBRITE_ID.search(url)
+    return seetickets_event_id(url) or (m.group(1) if m else _ticket_id(url))
+
+
+def is_official_link(e):
+    rules = OFFICIAL_TICKET_LINKS.get(e.get("venue"))
+    return not rules or bool(rules["event"].fullmatch(e.get("direct") or ""))
+
+
+def fix_direct_links(events):
+    """Point every show at SILO / Ductwork / It'll Do at its own page on the
+    venue's ticketing site (see OFFICIAL_TICKET_LINKS)."""
+    for e in events:  # Eventbrite links just lose their tracking junk (?aff=...)
+        if e.get("venue") == "itlldo" and "eventbrite.com/e/" in (e.get("direct") or ""):
+            e["direct"] = re.sub(r"[?#].*$", "", e["direct"])
+    todo = [e for e in events if e.get("date") and not is_official_link(e)]
+    if not todo:
+        return
+    fixed = {}
+    # 1. The Eventbrite ID is right in the URL (e.g. nextlvlevent.com/...-auto-eventbrite-1998489143827).
+    for e in todo:
+        m = _EVENTBRITE_ID.search(e.get("direct") or "")
+        if e["venue"] == "itlldo" and m:
+            fixed[id(e)] = f"https://www.eventbrite.com/e/{m.group(1)}"
+    # 2. The listing page the research found links to the show's official ticket page.
+    rest = [e for e in todo if id(e) not in fixed and e.get("direct")]
+    with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+        pages = list(pool.map(lambda e: fetch_html(e["direct"])[0], rest))
+    for e, page in zip(rest, pages):
+        links = official_links(page, e["venue"])
+        url = links[0] if len(links) == 1 else link_for_show(links, e.get("artist"))
+        if url:
+            fixed[id(e)] = url
+    # 3. Match the act's name against the venue's own listing pages.
+    rest = [e for e in todo if id(e) not in fixed]
+    venues = sorted({e["venue"] for e in rest})
+    listing_links = {}
+    for venue in venues:
+        with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+            pages = list(pool.map(lambda u: fetch_html(u)[0], OFFICIAL_TICKET_LINKS[venue]["listings"]))
+        listing_links[venue] = [u for page in pages for u in official_links(page, venue)]
+    for e in rest:
+        url = link_for_show(listing_links[e["venue"]], e.get("artist"))
+        if url:
+            fixed[id(e)] = url
+    # 4. Never a listing site: the venue's own events page.
+    unresolved = []
+    for e in todo:
+        if id(e) not in fixed:
+            unresolved.append(e.get("artist"))
+        e["direct"] = fixed.get(id(e), OFFICIAL_TICKET_LINKS[e["venue"]]["fallback"])
+    print(f"Ticket links: replaced {len(fixed)} of {len(todo)} non-venue link(s) with the show's own ticket page"
+          + (f"; {len(unresolved)} pointed at the venue's events page instead: {', '.join(unresolved)}" if unresolved else "."))
+
+
 GENRE_LOOKUP_SYSTEM_PROMPT = f"""You classify electronic music acts playing in Dallas-Fort Worth.
 For each numbered act, decide which ONE of these genres best describes what they play NOW:
 {", ".join(MAIN_GENRES)}.
@@ -1513,13 +1642,16 @@ def write_outputs(data, today_str):
         )
 
 
-def reframe_only(client):
-    """--reframe: work out the card crop for any flyer that needs it, using
-    the saved events (no research; only the per-flyer name check)."""
+def maintenance_only(client):
+    """--maintenance: on the saved events (no research), fix ticket links
+    that aren't the venue's own (fix_direct_links) and work out the card crop
+    for any flyer that needs it (one small API call per new flyer)."""
     with open(EVENTS_DATA_PATH, encoding="utf-8") as f:
         saved = json.load(f)
     data = {"last_updated": saved.get("last_updated"), "events": saved["events"],
             "venue_images": current_venue_images() or VENUE_FALLBACK_IMAGES}
+    fix_direct_links(data["events"])
+    data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
     fill_focus(client, data["events"], data["venue_images"])
     print_usage_summary()
     write_outputs(data, date.today().isoformat())
@@ -1532,8 +1664,8 @@ def main():
         sys.exit(1)
 
     client = anthropic.Anthropic(api_key=api_key)
-    if "--reframe" in sys.argv[1:]:
-        reframe_only(client)
+    if "--maintenance" in sys.argv[1:]:
+        maintenance_only(client)
         return
     data = run_research(client)
 
@@ -1547,6 +1679,7 @@ def main():
     data["events"] = combine_fixed_weekly(data["events"])
     data["events"] = drop_undated_non_weekly(data["events"])
     data["events"] = file_late_shows_under_night_before(data["events"])
+    fix_direct_links(data["events"])
     data["venue_images"] = venue_logo_images()
     missing = fill_event_images(data["events"], data["venue_images"])
     skipped = [e for e in missing if checked_recently(e, "image_checked", IMAGE_LOOKUP_RECHECK_DAYS, today_str)]
