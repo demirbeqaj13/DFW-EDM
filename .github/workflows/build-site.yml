@@ -58,9 +58,9 @@ jobs:
         run: |
           git config user.name "edmdfw-bot"
           git config user.email "actions@github.com"
-          git add events.js events_data.json index.html sitemap.xml robots.txt dallas-edm-shows dallas-edm-events this-weekend genres venues
+          git add events.js events_data.json index.html sitemap.xml robots.txt dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend genres venues
           # The sitemap's lastmod changes daily; only commit when a page did.
-          if git diff --cached --quiet -- events.js events_data.json index.html dallas-edm-shows dallas-edm-events this-weekend genres venues robots.txt; then
+          if git diff --cached --quiet -- events.js events_data.json index.html dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend genres venues robots.txt; then
             echo "No page changes"; exit 0
           fi
           git commit -m "Fix links, frame flyers and rebuild static pages"

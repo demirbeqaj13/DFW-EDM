@@ -7,6 +7,7 @@ landing pages whose listings are pre-built into the HTML -- artist names,
 venues, dates and cities are in the page source, plus schema.org Event data:
   * dallas-edm-shows/  -- the full calendar ("dallas edm shows"); the old
                          dallas-edm-events/ address forwards to it
+  * dallas-edm-concerts/ -- "dallas edm concerts": concert halls, arenas, festivals
   * this-weekend/       -- "edm events this weekend dallas"
   * genres/<genre>/     -- "dfw house music", "dallas techno", ...
   * venues/<venue>/     -- "silo dallas events", ...
@@ -488,7 +489,7 @@ def build_landing_pages(page, data, today):
     venue_keys = sorted((k for k in venue_counts if k in venues and not venues[k].get("closed")),
                         key=lambda k: (-venue_counts[k], venues[k]["name"]))
     nav = [
-        ("Calendar", [("/dallas-edm-shows/", "All Dallas EDM shows"), ("/this-weekend/", "EDM events this weekend")]),
+        ("Calendar", [("/dallas-edm-shows/", "All Dallas EDM shows"), ("/dallas-edm-concerts/", "Dallas EDM concerts"), ("/this-weekend/", "EDM events this weekend")]),
         ("Genres", [(f"/genres/{slugify(g)}/", f"DFW {g}") for g in genres]),
         ("Venues", [(f"/venues/{slugify(venues[k]['name'])}/", venues[k]["name"]) for k in venue_keys]),
     ]
@@ -511,6 +512,25 @@ def build_landing_pages(page, data, today):
                f"{', ' + period if period else ''}, plus {len(weekly_all)} weekly nights."),
         addr="", events=dated, venues=venues, today=today, nav=nav, current_href="/dallas-edm-shows/",
         weekly=weekly_all, empty_note="No upcoming shows are listed right now.")))
+
+    # Concerts: the bigger ticketed shows (concert halls, arenas, pavilions,
+    # festivals), not club and after-hours nights -- its own list, so it isn't
+    # a copy of the full calendar.
+    concerts = [e for e in dated if e["venue"] in CONCERT_VENUES]
+    years = sorted({e["date"][:4] for e in concerts}) or [today[:4]]
+    c_years = years[0] if len(years) == 1 else f"{years[0]}–{years[-1]}"
+    c_venues = list(dict.fromkeys(venues[e["venue"]]["name"] for e in concerts if e["venue"] in venues))
+    pages.append(("dallas-edm-concerts/index.html", landing_page(
+        page, path="/dallas-edm-concerts/",
+        title=f"Dallas EDM Concerts {c_years} – Upcoming Electronic Music Concerts in DFW | DFW EDM",
+        description=(f"{len(concerts)} upcoming EDM concerts in Dallas-Fort Worth at "
+                     f"{', '.join(c_venues[:4]) or 'SILO, Dickies Arena and more'}: headline DJ tours, "
+                     "arena shows and festivals, with dates and tickets."),
+        h1="Dallas EDM concerts",
+        intro=(f"{len(concerts)} headline electronic concerts at DFW's concert halls, arenas and festivals. "
+               "For club nights and after-hours too, see all Dallas EDM shows."),
+        addr="", events=concerts, venues=venues, today=today, nav=nav, current_href="/dallas-edm-concerts/",
+        empty_note="No concerts are listed right now. See every upcoming show below.")))
 
     # This weekend
     fri, sun = weekend_range(today)
@@ -576,6 +596,12 @@ def remove_stale(dirname, keep):
                 os.rmdir(os.path.join(root, slug))
             except OSError:
                 pass
+
+
+# Concert halls, arenas, pavilions and festival grounds (the
+# /dallas-edm-concerts/ page) -- as opposed to clubs and after-hours rooms.
+CONCERT_VENUES = {"silo", "bombfactory", "studiofactory", "deepellumartco", "toyotamusic",
+                  "dosequis", "dickies", "fairpark"}
 
 
 # Old addresses that now live elsewhere. GitHub Pages can't send real
