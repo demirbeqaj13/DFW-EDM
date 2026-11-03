@@ -429,7 +429,7 @@ TASK:
    direct ticket purchase URL (the venue's own primary ticket link, not a resale site). Listing
    sites (do214, JamBase, concertfix, concerts50, nextlvlevent, dallas-tx.events...) are fine for
    FINDING shows but are never the "direct" link: follow them to the show's own ticket page. SILO and
-   Ductwork sell on SeeTickets (wl.seetickets.us/event/<NAME>/<id>, or Eventim's wl.eventim.us/event/...);
+   Ductwork sell on Eventim / SeeTickets (wl.eventim.us/event/<NAME>/<id>; old wl.seetickets.us links work too);
    It'll Do Club sells on
    Eventbrite (eventbrite.com/e/...-<id>).
 6c. EVENT-CENTERED VENUES -- {", ".join(VENUES[k]["name"] for k in EVENT_CENTERED_VENUES)}: these book
@@ -1029,7 +1029,7 @@ _OG_PATTERNS = [
 # -> cdn.vor.us/event/702474/og/....png. Matching on the ID finds the right flyer
 # even when the page's og:image is a generic venue banner, and guarantees a
 # flyer never gets attached to the wrong show.
-SEETICKETS_EVENT_ID = re.compile(r"seetickets\.us/event/[^/?#]+/(\d+)", re.I)
+SEETICKETS_EVENT_ID = re.compile(r"(?:seetickets|eventim)\.us/event/[^/?#]+/(\d+)", re.I)
 # Venue pages that list their SeeTickets shows with flyers, scanned as a
 # fallback when an individual ticket page can't be read.
 SEETICKETS_LISTING_PAGES = [
@@ -1459,12 +1459,19 @@ def is_official_link(e):
     return not rules or bool(rules["event"].fullmatch(e.get("direct") or ""))
 
 
+def to_eventim(url):
+    """SeeTickets event links on Eventim's own address. The old SeeTickets
+    address forwards there through a "you're in line" waiting room; the
+    event number is the same on both."""
+    return re.sub(r"^https?://wl\.seetickets\.us/event/", "https://wl.eventim.us/event/", url or "", flags=re.I) or url
+
+
 def fix_direct_links(events):
     """Point every show at SILO / Ductwork / It'll Do at its own page on the
     venue's ticketing site (see OFFICIAL_TICKET_LINKS)."""
     for e in events:
         if e.get("direct"):
-            e["direct"] = e["direct"].rstrip("\\")  # stray escape copied from page source
+            e["direct"] = to_eventim(e["direct"].rstrip("\\"))  # stray escape copied from page source
         if e.get("venue") == "itlldo" and "eventbrite.com/e/" in (e.get("direct") or ""):
             e["direct"] = re.sub(r"[?#].*$", "", e["direct"])  # Eventbrite tracking (?aff=...)
         # SILO and Ductwork share a building and a ticket site; the link's
@@ -1525,7 +1532,7 @@ def fix_direct_links(events):
     for e in todo:
         if id(e) not in fixed:
             unresolved.append(e.get("artist"))
-        e["direct"] = fixed.get(id(e), OFFICIAL_TICKET_LINKS[e["venue"]]["fallback"])
+        e["direct"] = to_eventim(fixed.get(id(e), OFFICIAL_TICKET_LINKS[e["venue"]]["fallback"]))
     print(f"Ticket links: replaced {len(fixed)} of {len(todo)} non-venue / broken link(s) with the show's own ticket page"
           + (f"; {len(unresolved)} pointed at the venue's events page instead: {', '.join(unresolved)}" if unresolved else "."))
 
@@ -1596,7 +1603,7 @@ def run_genre_lookup(client, events_vague):
 IMAGE_LOOKUP_SYSTEM_PROMPT = """You find the official promotional flyer image for specific
 events. For each numbered event, use web_fetch on its ticket URL (and the venue's own event page
 if needed) and return the URL of THAT event's flyer/artwork image, copied exactly from the fetched
-content -- never constructed or guessed. SeeTickets shows (wl.seetickets.us/event/<name>/<id>)
+content -- never constructed or guessed. Eventim / SeeTickets shows (wl.eventim.us/event/<name>/<id>)
 host their flyer at https://cdn.vor.us/event/<id>/... using the same numeric <id>. Never return a
 venue logo, a generic site banner, or another event's image; use null if you can't find the real one.
 
