@@ -20,6 +20,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
@@ -888,8 +889,12 @@ def are_duplicate_events(a, b, generic_images):
     "AWEN (Hybrid Set)"). Runs and carry-forward often word the same show
     differently ("me n u on New Years Eve" vs "NYE with me n u") -- but the
     ticket link or flyer gives it away."""
-    if a.get("venue") != b.get("venue") or a.get("date") != b.get("date") or not a.get("date"):
+    if a.get("date") != b.get("date") or not a.get("date"):
         return False
+    if a.get("venue") != b.get("venue"):
+        # The same show filed under both SILO and Ductwork.
+        return ({a.get("venue"), b.get("venue")} <= SAME_BUILDING
+                and show_number(a) is not None and show_number(a) == show_number(b))
     # The same link only proves it's the same show when it's one show's page,
     # not a venue's events page that several shows fall back to.
     if (a.get("direct") and _ticket_id(a.get("direct")) == _ticket_id(b.get("direct"))
@@ -1355,7 +1360,7 @@ def fill_event_images(events, venue_images):
 # itself, or a name match on the venue's own listing pages. Failing all
 # three, it points at the venue's own events page -- never a listing site.
 _SEETICKETS_EVENT_LINK = re.compile(
-    r"https?://wl\.(?:seetickets|eventim)\.us/event/[^\"'\s<>/]+/\d+[^\"'\s<>]*", re.I)
+    r"https?://wl\.(?:seetickets|eventim)\.us/event/[^\"'\s<>/\\]+/\d+[^\"'\s<>\\]*", re.I)
 OFFICIAL_TICKET_LINKS = {
     # Disco Presents venues: SeeTickets, now also its owner Eventim's white label.
     "silo": {
@@ -1370,11 +1375,26 @@ OFFICIAL_TICKET_LINKS = {
         "fallback": "https://wl.seetickets.us/DiscoPresents-Ductwork",
     },
     "itlldo": {
-        "event": re.compile(r"https?://(?:www\.)?eventbrite\.com/e/[^\"'\s<>?#]*?\d{9,}", re.I),
+        "event": re.compile(r"https?://(?:www\.)?eventbrite\.com/e/[^\"'\s<>?#\\]*?\d{9,}", re.I),
         "listings": ["https://www.itlldoclub.com/", "https://linktr.ee/itlldoclub"],
         "fallback": "https://www.itlldoclub.com/",
     },
 }
+# SILO's main room and Ductwork (its smaller room) sell on the same ticket
+# site, and research sometimes files a Ductwork show under SILO too.
+SAME_BUILDING = {"silo", "ductwork"}
+_SHOW_NUMBER = re.compile(r"(?:wl\.(?:seetickets|eventim)\.us/event/[^/?#]+/|cdn\.vor\.us/event/)(\d+)", re.I)
+
+
+def show_number(e):
+    """The show's SeeTickets / Eventim event number, from its link or flyer."""
+    for field in ("direct", "image"):
+        m = _SHOW_NUMBER.search(e.get(field) or "")
+        if m:
+            return m.group(1)
+    return None
+
+
 VENUE_FALLBACK_LINKS = {rules["fallback"] for rules in OFFICIAL_TICKET_LINKS.values()}
 _EVENTBRITE_ID = re.compile(r"(?:eventbrite\.com/e/(?:[^/?#]*-)?|eventbrite-)(\d{9,})", re.I)
 
@@ -1415,6 +1435,25 @@ def _show_id(url):
     return seetickets_event_id(url) or (m.group(1) if m else _ticket_id(url))
 
 
+# What SeeTickets / Eventim show for a show that's gone (moved, cancelled,
+# taken off sale) instead of an HTTP error.
+_DEAD_PAGE_MARKERS = ("page you requested could not be found", "error looking up the current event")
+
+
+def link_is_dead(url):
+    """True only when the ticket page is definitely gone (404 / 410, or the
+    ticket site's own error page); False when it works or can't be checked."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "text/html"})
+        with urllib.request.urlopen(req, timeout=OG_FETCH_TIMEOUT) as resp:
+            page = resp.read(1_000_000).decode("utf-8", "replace").lower()
+    except urllib.error.HTTPError as exc:
+        return exc.code in (404, 410)
+    except Exception:
+        return False
+    return any(marker in page for marker in _DEAD_PAGE_MARKERS)
+
+
 def is_official_link(e):
     rules = OFFICIAL_TICKET_LINKS.get(e.get("venue"))
     return not rules or bool(rules["event"].fullmatch(e.get("direct") or ""))
@@ -1423,20 +1462,43 @@ def is_official_link(e):
 def fix_direct_links(events):
     """Point every show at SILO / Ductwork / It'll Do at its own page on the
     venue's ticketing site (see OFFICIAL_TICKET_LINKS)."""
-    for e in events:  # Eventbrite links just lose their tracking junk (?aff=...)
+    for e in events:
+        if e.get("direct"):
+            e["direct"] = e["direct"].rstrip("\\")  # stray escape copied from page source
         if e.get("venue") == "itlldo" and "eventbrite.com/e/" in (e.get("direct") or ""):
-            e["direct"] = re.sub(r"[?#].*$", "", e["direct"])
+            e["direct"] = re.sub(r"[?#].*$", "", e["direct"])  # Eventbrite tracking (?aff=...)
+        # SILO and Ductwork share a building and a ticket site; the link's
+        # affiliate key says which room the show is in.
+        key = re.search(r"[?&]afflky=([^&#]+)", e.get("direct") or "")
+        if e.get("venue") in SAME_BUILDING and key:
+            e["venue"] = "ductwork" if "ductwork" in key.group(1).lower() else "silo"
+    today = date.today().isoformat()
     todo = [e for e in events if e.get("date") and not is_official_link(e)]
+    # Official links that stopped working (show moved to a new page, or gone).
+    official = [e for e in events if (e.get("date") or "") >= today and e.get("venue") in OFFICIAL_TICKET_LINKS
+                and is_official_link(e)]
+    with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+        dead = [e for e, gone in zip(official, pool.map(lambda e: link_is_dead(e["direct"]), official)) if gone]
+    if len(dead) > len(official) / 2:
+        # More broken than working: the ticket site is blocking or failing the
+        # check, not every show moving at once. Leave the links alone.
+        print(f"Ticket link check: {len(dead)} of {len(official)} looked broken; ignoring the check this run.",
+              file=sys.stderr)
+        dead = []
+    if dead:
+        print("Ticket links no longer working: " + ", ".join(f'{e.get("artist")} ({e["direct"]})' for e in dead))
+    dead_links = {id(e): e["direct"] for e in dead}
+    todo += dead
     if not todo:
         return
     fixed = {}
     # 1. The Eventbrite ID is right in the URL (e.g. nextlvlevent.com/...-auto-eventbrite-1998489143827).
     for e in todo:
         m = _EVENTBRITE_ID.search(e.get("direct") or "")
-        if e["venue"] == "itlldo" and m:
+        if e["venue"] == "itlldo" and m and id(e) not in dead_links:
             fixed[id(e)] = f"https://www.eventbrite.com/e/{m.group(1)}"
     # 2. The listing page the research found links to the show's official ticket page.
-    rest = [e for e in todo if id(e) not in fixed and e.get("direct")]
+    rest = [e for e in todo if id(e) not in fixed and e.get("direct") and id(e) not in dead_links]
     with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
         pages = list(pool.map(lambda e: fetch_html(e["direct"])[0], rest))
     for e, page in zip(rest, pages):
@@ -1453,7 +1515,9 @@ def fix_direct_links(events):
             pages = list(pool.map(lambda u: fetch_html(u)[0], OFFICIAL_TICKET_LINKS[venue]["listings"]))
         listing_links[venue] = [u for page in pages for u in official_links(page, venue)]
     for e in rest:
-        url = link_for_show(listing_links[e["venue"]], e.get("artist"))
+        gone = dead_links.get(id(e))
+        candidates = [u for u in listing_links[e["venue"]] if not gone or _show_id(u) != _show_id(gone)]
+        url = link_for_show(candidates, e.get("artist"))
         if url:
             fixed[id(e)] = url
     # 4. Never a listing site: the venue's own events page.
@@ -1462,7 +1526,7 @@ def fix_direct_links(events):
         if id(e) not in fixed:
             unresolved.append(e.get("artist"))
         e["direct"] = fixed.get(id(e), OFFICIAL_TICKET_LINKS[e["venue"]]["fallback"])
-    print(f"Ticket links: replaced {len(fixed)} of {len(todo)} non-venue link(s) with the show's own ticket page"
+    print(f"Ticket links: replaced {len(fixed)} of {len(todo)} non-venue / broken link(s) with the show's own ticket page"
           + (f"; {len(unresolved)} pointed at the venue's events page instead: {', '.join(unresolved)}" if unresolved else "."))
 
 
