@@ -5,7 +5,8 @@ Static build for edmdfw.com (no API calls; safe to run any time).
 Reads events.js (the data the homepage loads) and writes search-engine
 landing pages whose listings are pre-built into the HTML -- artist names,
 venues, dates and cities are in the page source, plus schema.org Event data:
-  * dallas-edm-events/ -- the full calendar ("dallas edm shows")
+  * dallas-edm-shows/  -- the full calendar ("dallas edm shows"); the old
+                         dallas-edm-events/ address forwards to it
   * this-weekend/       -- "edm events this weekend dallas"
   * genres/<genre>/     -- "dfw house music", "dallas techno", ...
   * venues/<venue>/     -- "silo dallas events", ...
@@ -484,7 +485,7 @@ def build_landing_pages(page, data, today):
     venue_keys = sorted((k for k in venue_counts if k in venues and not venues[k].get("closed")),
                         key=lambda k: (-venue_counts[k], venues[k]["name"]))
     nav = [
-        ("Calendar", [("/dallas-edm-events/", "All Dallas EDM shows"), ("/this-weekend/", "EDM events this weekend")]),
+        ("Calendar", [("/dallas-edm-shows/", "All Dallas EDM shows"), ("/this-weekend/", "EDM events this weekend")]),
         ("Genres", [(f"/genres/{slugify(g)}/", f"DFW {g}") for g in genres]),
         ("Venues", [(f"/venues/{slugify(venues[k]['name'])}/", venues[k]["name"]) for k in venue_keys]),
     ]
@@ -497,15 +498,15 @@ def build_landing_pages(page, data, today):
     top = [venues[k]["name"] for k, _ in sorted(counts.items(), key=lambda kv: -kv[1])[:4] if k in venues]
     months = list(dict.fromkeys(e["date"][:7] for e in dated))
     period = f"{month_long(months[0])} – {month_long(months[-1])}" if len(months) > 1 else (month_long(months[0]) if months else "")
-    pages.append(("dallas-edm-events/index.html", landing_page(
-        page, path="/dallas-edm-events/",
+    pages.append(("dallas-edm-shows/index.html", landing_page(
+        page, path="/dallas-edm-shows/",
         title="Dallas EDM Shows & Events – DFW House, Techno & Bass Calendar | DFW EDM",
         description=(f"All {len(dated)} upcoming EDM, house, techno, dubstep and bass shows in Dallas-Fort Worth"
                      f"{' at ' + ', '.join(top) + ' and more' if top else ''}, by date with tickets and free events."),
-        h1="Dallas-Fort Worth EDM shows",
+        h1="Dallas EDM shows",
         intro=(f"{len(dated)} upcoming electronic shows across {len(counts)} venues"
                f"{', ' + period if period else ''}, plus {len(weekly_all)} weekly nights."),
-        addr="", events=dated, venues=venues, today=today, nav=nav, current_href="/dallas-edm-events/",
+        addr="", events=dated, venues=venues, today=today, nav=nav, current_href="/dallas-edm-shows/",
         weekly=weekly_all, empty_note="No upcoming shows are listed right now.")))
 
     # This weekend
@@ -574,6 +575,23 @@ def remove_stale(dirname, keep):
                 pass
 
 
+# Old addresses that now live elsewhere. GitHub Pages can't send real
+# redirects, so each gets a tiny page that forwards visitors at once and tells
+# Google (canonical) which address to index. Not listed in the sitemap.
+MOVED = {
+    "dallas-edm-events/": "/dallas-edm-shows/",
+}
+
+
+def forwarding_page(target):
+    url = SITE + target
+    return (f'<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8">\n'
+            f'<title>Moved – DFW EDM</title>\n<link rel="canonical" href="{url}">\n'
+            f'<meta http-equiv="refresh" content="0; url={target}">\n'
+            f'<script>location.replace("{target}" + location.hash)</script>\n'
+            f'</head><body><p>This page moved to <a href="{target}">{url}</a>.</p></body></html>\n')
+
+
 def main():
     data = load_data()
     today = today_str()
@@ -591,6 +609,8 @@ def main():
     remove_stale("venues", keep)
     for rel, content in pages:
         write(rel, content)
+    for old, target in MOVED.items():
+        write(old + "index.html", forwarding_page(target))
 
     lastmod = now_ct().date().isoformat()
     urls = ["/"] + ["/" + rel[: -len("index.html")] for rel, _ in pages]
