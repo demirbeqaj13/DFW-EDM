@@ -416,6 +416,9 @@ def landing_page(page, *, path, title, description, h1, intro, addr, events, ven
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0A0A10">
 {head_tags(title, description, path, events, venues)}
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -586,7 +589,7 @@ MOVED = {
 def forwarding_page(target):
     url = SITE + target
     return (f'<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8">\n'
-            f'<title>Moved – DFW EDM</title>\n<link rel="canonical" href="{url}">\n'
+            f'<title>Moved – DFW EDM</title>\n<link rel="icon" href="/favicon.ico">\n<link rel="canonical" href="{url}">\n'
             f'<meta http-equiv="refresh" content="0; url={target}">\n'
             f'<script>location.replace("{target}" + location.hash)</script>\n'
             f'</head><body><p>This page moved to <a href="{target}">{url}</a>.</p></body></html>\n')
