@@ -6,6 +6,7 @@ name: Build static pages
 # homepage body is never touched. First, on the saved events, swaps any
 # ticket link that isn't the venue's own for the show's real ticket page, and
 # frames any flyer whose card crop hasn't been worked out yet
+# and makes card-sized thumbnails of new flyers
 # (update_events.py --maintenance: one small Claude call per new flyer;
 # nothing new, no calls).
 on:
@@ -42,7 +43,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install anthropic "opencv-python-headless==4.10.0.84"
+        run: pip install anthropic "opencv-python-headless==4.10.0.84" "pillow>=11.3"
 
       - name: Fix ticket links and frame new flyers
         # Never let a problem here block the daily page rebuild.
@@ -58,9 +59,9 @@ jobs:
         run: |
           git config user.name "edmdfw-bot"
           git config user.email "actions@github.com"
-          git add events.js events_data.json index.html sitemap.xml robots.txt dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend privacy terms genres venues
+          mkdir -p img/t && git add -A img/t && git add events.js events_data.json index.html sitemap.xml robots.txt dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend privacy terms genres venues
           # The sitemap's lastmod changes daily; only commit when a page did.
-          if git diff --cached --quiet -- events.js events_data.json index.html dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend privacy terms genres venues robots.txt; then
+          if git diff --cached --quiet -- img/t events.js events_data.json index.html dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend privacy terms genres venues robots.txt; then
             echo "No page changes"; exit 0
           fi
           git commit -m "Fix links, frame flyers and rebuild static pages"

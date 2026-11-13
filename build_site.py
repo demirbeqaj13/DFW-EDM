@@ -129,9 +129,10 @@ def asset(url, base):
 
 
 def img_tag(e, venues, base=""):
-    venue_image = (venues.get(e["venue"]) or {}).get("image")
+    v = venues.get(e["venue"]) or {}
     chain = []
-    for u in (e.get("image"), venue_image):
+    # Small card-sized copies (thumb) first; the full-size originals are fallbacks.
+    for u in (e.get("image") and e.get("thumb"), e.get("image"), v.get("thumb"), v.get("image")):
         if u and u not in chain:
             chain.append(u)
     if not chain:

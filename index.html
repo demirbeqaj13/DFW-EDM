@@ -351,8 +351,9 @@ function imgFallback(img){
   function imgTag(e, extraClass){
     // Cards show the event's own flyer, else the venue's logo -- never a
     // made-up graphic. imgFallback() walks this chain on load errors.
-    var venueImage = VENUES[e.venue] && VENUES[e.venue].image;
-    var chain = [e.image, venueImage].filter(function(u, i, a){ return u && a.indexOf(u) === i; });
+    // Small card-sized copies (thumb) first; the full-size originals are fallbacks.
+    var v = VENUES[e.venue] || {};
+    var chain = [e.image && e.thumb, e.image, v.thumb, v.image].filter(function(u, i, a){ return u && a.indexOf(u) === i; });
     if(!chain.length) return "";
     // focus = where the face is in the flyer (set by the updater).
     var style = (e.focus && e.image) ? ' style="object-position:' + esc(e.focus) + '"' : '';

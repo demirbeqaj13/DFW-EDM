@@ -27,7 +27,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install anthropic "opencv-python-headless==4.10.0.84"
+        run: pip install anthropic "opencv-python-headless==4.10.0.84" "pillow>=11.3"
 
       - name: Run updater
         env:
@@ -46,11 +46,14 @@ jobs:
           # site. (A `git reset --soft` here used to commit the run's stale copy
           # of index.html, reverting PRs merged mid-run.)
           cp events.js events_data.json "$RUNNER_TEMP/"
+          rm -rf "$RUNNER_TEMP/t" && cp -r img/t "$RUNNER_TEMP/t" 2>/dev/null || mkdir -p "$RUNNER_TEMP/t"
           git fetch origin main
           git reset --hard origin/main
           cp "$RUNNER_TEMP/events.js" "$RUNNER_TEMP/events_data.json" .
+          # Card thumbnails: exactly the set this run made / kept.
+          rm -rf img/t && cp -r "$RUNNER_TEMP/t" img/t
           # Rebuild the SEO landing pages, sitemap and the homepage's <head>
           # SEO block from the new events (the homepage body is never touched).
           python3 build_site.py
-          git add events.js events_data.json index.html sitemap.xml robots.txt dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend privacy terms genres venues
+          mkdir -p img/t && git add -A img/t && git add events.js events_data.json index.html sitemap.xml robots.txt dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend privacy terms genres venues
           git diff --cached --quiet || (git commit -m "Automated events update" && git push origin main)

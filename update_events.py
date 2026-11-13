@@ -15,7 +15,9 @@ Run manually to test:
 """
 
 import base64
+import hashlib
 import html
+import io
 import json
 import os
 import re
@@ -29,7 +31,8 @@ from urllib.parse import urljoin, urlparse
 import anthropic
 
 MODEL = "claude-sonnet-5"
-OUTPUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "events.js")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_PATH = os.path.join(SCRIPT_DIR, "events.js")
 # Raw JSON snapshot of the last successful run, committed to the repo alongside
 # events.js. Read back in on the next run so a transient research miss (a venue
 # page that failed to load, an event the model ran out of budget to re-verify)
@@ -723,6 +726,8 @@ def build_events_js(data: dict) -> str:
         parts = [f'name: {js_str(v["name"])}', f'address: {js_str(v["address"])}', f'site: {js_str(v["site"])}']
         # Venue-level image the page swaps in if an event's own flyer fails to load.
         parts.append(f'image: {js_str(venue_images.get(key))}')
+        if data.get("venue_thumbs", {}).get(key):
+            parts.append(f'thumb: {js_str(data["venue_thumbs"][key])}')
         if v.get("closed"):
             parts.append("closed: true")
         if key in NO_RESALE_VENUES:
@@ -751,6 +756,8 @@ def build_events_js(data: dict) -> str:
             f'genre: {js_str(e.get("genre"))}, direct: {js_str(e["direct"])}, '
             f'image: {js_str(e.get("image") or venue_images.get(venue_key))}'
         )
+        if e.get("thumb") and e.get("image"):
+            obj += f', thumb: {js_str(e["thumb"])}'
         if e.get("focus") and e.get("image"):
             obj += f', focus: {js_str(e["focus"])}'
         if e.get("recurring"):
@@ -1313,6 +1320,78 @@ def fill_focus(client, events, venue_images):
           + (f"; {retry} to retry next run." if retry else "."))
 
 
+# Flyers are full-size uploads (often several MB) but cards show them at
+# 96x120. fill_thumbnails() saves a small WebP copy of each flyer and venue
+# logo in the repo (img/t/), sized for the card at 3x for sharp phone
+# screens, and the page loads that first (the original stays as fallback).
+# Same proportions as the original, so the card crop (focus) still applies.
+THUMB_DIR = "img/t"
+THUMB_SIZE = (288, 360)          # 3x the 96x120 card thumbnail
+THUMB_QUALITY = 78
+
+
+def thumb_path(url):
+    return f"{THUMB_DIR}/{hashlib.sha1(url.encode()).hexdigest()[:16]}.webp"
+
+
+def make_thumbnail(url, rel):
+    """Download an image and save a card-sized WebP copy; True on success."""
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return False
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=OG_FETCH_TIMEOUT) as resp:
+            raw = resp.read(FACE_IMAGE_MAX_BYTES)
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw)))
+        if img.mode in ("RGBA", "LA", "P"):
+            img = img.convert("RGBA")
+            backdrop = Image.new("RGBA", img.size, (0, 0, 0, 255))  # cards are black behind images
+            img = Image.alpha_composite(backdrop, img)
+        img = img.convert("RGB")
+        scale = max(THUMB_SIZE[0] / img.width, THUMB_SIZE[1] / img.height)
+        if scale < 1:  # only ever shrink
+            img = img.resize((max(1, round(img.width * scale)), max(1, round(img.height * scale))), Image.LANCZOS)
+        path = os.path.join(SCRIPT_DIR, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        img.save(path, "WEBP", quality=THUMB_QUALITY, method=6)
+        return True
+    except Exception as exc:
+        print(f"Thumbnail: could not make one for {url}: {exc}", file=sys.stderr)
+        return False
+
+
+def fill_thumbnails(events, venue_images):
+    """Set "thumb" on each event (and return {venue: thumb}) for every web
+    image, making any thumbnail that doesn't exist yet; delete thumbnails
+    nothing uses any more."""
+    wanted = {}
+    for e in events:
+        if (e.get("image") or "").startswith("http"):
+            wanted[e["image"]] = thumb_path(e["image"])
+    for img in venue_images.values():
+        if (img or "").startswith("http"):
+            wanted[img] = thumb_path(img)
+    todo = [(u, rel) for u, rel in wanted.items() if not os.path.exists(os.path.join(SCRIPT_DIR, rel))]
+    with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+        made = list(pool.map(lambda job: make_thumbnail(*job), todo))
+    ready = {u: rel for u, rel in wanted.items() if os.path.exists(os.path.join(SCRIPT_DIR, rel))}
+    for e in events:
+        e["thumb"] = ready.get(e.get("image"))
+        if not e["thumb"]:
+            del e["thumb"]
+    folder = os.path.join(SCRIPT_DIR, THUMB_DIR)
+    keep = {os.path.basename(rel) for rel in ready.values()}
+    removed = 0
+    for name in (os.listdir(folder) if os.path.isdir(folder) else []):
+        if name.endswith(".webp") and name not in keep:
+            os.remove(os.path.join(folder, name))
+            removed += 1
+    print(f"Thumbnails: made {sum(made)} of {len(todo)} new, {len(ready)} in use, removed {removed} unused.")
+    return {k: ready[v] for k, v in venue_images.items() if v in ready}
+
+
 def needs_flyer(e, generic):
     return bool(e.get("date")) and not is_acceptable_flyer(e, e.get("image"), generic)
 
@@ -1722,8 +1801,9 @@ def write_outputs(data, today_str):
 
 def maintenance_only(client):
     """--maintenance: on the saved events (no research), fix ticket links
-    that aren't the venue's own (fix_direct_links) and work out the card crop
-    for any flyer that needs it (one small API call per new flyer)."""
+    that aren't the venue's own (fix_direct_links), work out the card crop
+    for any flyer that needs it (one small API call per new flyer) and make
+    any missing card thumbnails."""
     with open(EVENTS_DATA_PATH, encoding="utf-8") as f:
         saved = json.load(f)
     data = {"last_updated": saved.get("last_updated"), "events": saved["events"],
@@ -1731,6 +1811,7 @@ def maintenance_only(client):
     fix_direct_links(data["events"])
     data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
     fill_focus(client, data["events"], data["venue_images"])
+    data["venue_thumbs"] = fill_thumbnails(data["events"], data["venue_images"])
     print_usage_summary()
     write_outputs(data, date.today().isoformat())
 
@@ -1829,6 +1910,7 @@ def main():
         found = sum(1 for e in needs_lookup if e.get("stubhub"))
         print(f"StubHub lookup pass found {found} link(s) out of {len(needs_lookup)} near-term event(s) checked.")
 
+    data["venue_thumbs"] = fill_thumbnails(data["events"], data["venue_images"])
     write_outputs(data, today_str)
     print(f"Wrote {len(data['events'])} events to {OUTPUT_PATH}")
     print_usage_summary()
