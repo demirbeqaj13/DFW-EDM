@@ -52,5 +52,5 @@ jobs:
           # Rebuild the SEO landing pages, sitemap and the homepage's <head>
           # SEO block from the new events (the homepage body is never touched).
           python3 build_site.py
-          git add events.js events_data.json index.html sitemap.xml robots.txt dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend genres venues
+          git add events.js events_data.json index.html sitemap.xml robots.txt dallas-edm-shows dallas-edm-concerts dallas-edm-events this-weekend privacy terms genres venues
           git diff --cached --quiet || (git commit -m "Automated events update" && git push origin main)
