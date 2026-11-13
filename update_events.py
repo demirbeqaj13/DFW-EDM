@@ -47,7 +47,6 @@ VENUES = {
     "studiofactory": {"name": "The Studio at The Bomb Factory", "address": "2727 Canton St, Dallas, TX", "site": "https://www.thebombfactory.com/events"},
     "greenelephant": {"name": "Green Elephant", "address": "5627 Dyer St, Dallas, TX", "site": "https://www.greenelephantdallas.com/blank"},
     "sounders": {"name": "Sounders", "address": "1211 E Levee St, Dallas, TX", "site": "https://soundersdallas.com/pages/events-tickets"},
-    "stereolive": {"name": "Stereo Live Dallas", "address": "N/A - CLOSED", "site": "", "closed": True},
     "deepellumartco": {"name": "Deep Ellum Art Co", "address": "2803 Taylor St, Dallas, TX", "site": "https://www.deepellumart.co/shows"},
     "toyotamusic": {"name": "Toyota Music Factory / The Pavilion", "address": "316 W Las Colinas Blvd, Irving, TX", "site": "https://www.toyotamusicfactory.com/upcoming-events"},
     "dosequis": {"name": "Dos Equis Pavilion", "address": "3839 S Fitzhugh Ave, Dallas, TX", "site": "https://www.dosequispavilion.com/events"},
@@ -96,6 +95,10 @@ VENUE_SECONDARY_SOURCES = {
 # Venues whose calendar is built around themed nights / series rather than
 # named headliners. Research must list those nights even with no DJ named.
 EVENT_CENTERED_VENUES = ["sounders"]
+
+# The site owner's promoter discount codes, shown on every ticketed (not
+# free) show at that venue, next to its Tickets button.
+PROMO_CODES = {"ctrlroom": "DFWX"}
 
 # Venues with no meaningful resale market: their shows only ever get the
 # direct link (no SeatGeek / StubHub), and the StubHub pass skips them.
@@ -360,7 +363,6 @@ def checked_recently(e, field, days, today_str):
         return False
     return last >= (date.fromisoformat(today_str) - timedelta(days=days)).isoformat()
 
-CLOSED_VENUES_NOTE = "Stereo Live Dallas closed permanently in early 2026 and is no longer booking shows. Kept here for reference only."
 
 SYSTEM_PROMPT = f"""You maintain the event data for edmdfw.com, a site tracking electronic/house/bass/techno
 shows across Dallas-Fort Worth. Your job each run is to produce a fresh, accurate events list.
@@ -725,6 +727,8 @@ def build_events_js(data: dict) -> str:
             parts.append("closed: true")
         if key in NO_RESALE_VENUES:
             parts.append("noResale: true")
+        if key in PROMO_CODES:
+            parts.append(f"promo: {js_str(PROMO_CODES[key])}")
         lines.append(f'  "{key}": {{ {", ".join(parts)} }},')
     lines.append("};")
     lines.append("")
@@ -766,7 +770,6 @@ def build_events_js(data: dict) -> str:
         lines.append(obj)
     lines.append("];")
     lines.append("")
-    lines.append(f'const CLOSED_VENUES_NOTE = {js_str(CLOSED_VENUES_NOTE)};')
     lines.append("")
     return "\n".join(lines)
 

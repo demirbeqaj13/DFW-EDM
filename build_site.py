@@ -170,10 +170,18 @@ def card_html(e, venues, base=""):
         f'<div class="ev-title">{esc(title)}</div>'
         + (f'<div class="lineup">{esc(lineup)}</div>' if lineup else "")
         + f'<div class="meta">{meta}</div>'
-        f'<div class="actions">{actions}</div>'
+        + promo_html(e, venues)
+        + f'<div class="actions">{actions}</div>'
         '</div>'
         '</article>'
     )
+
+
+def promo_html(e, venues):
+    """Our promoter discount code for the venue, on ticketed (not free) shows."""
+    code = None if e.get("free") else (venues.get(e["venue"]) or {}).get("promo")
+    return (f'<div class="promo">Discount code <button type="button" class="promo-code" data-code="{esc(code)}"'
+            f' aria-label="Copy discount code {esc(code)}">{esc(code)}</button></div>') if code else ""
 
 
 def weekly_days(e):
@@ -459,9 +467,18 @@ def landing_page(page, *, path, title, description, h1, intro, addr, events, ven
 </main>
 <footer class="wrap">
   <p class="fine">Refreshed every few days &middot; <a href="/">See every Dallas-Fort Worth EDM event</a></p>
-  <p class="fine legal-links">Not affiliated with any venue, promoter, artist or ticket seller. Some ticket links may earn us a commission. &middot; <a href="/privacy/">Privacy</a> &middot; <a href="/terms/">Terms</a></p>
+  <p class="fine legal-links">Not affiliated with any venue, promoter, artist or ticket seller. Some ticket links and discount codes may earn us a commission. &middot; <a href="/privacy/">Privacy</a> &middot; <a href="/terms/">Terms</a></p>
 </footer>
 <script>
+// Tap a discount code to copy it.
+document.addEventListener("click", function(ev){{
+  var btn = ev.target.closest && ev.target.closest(".promo-code");
+  if(!btn || !navigator.clipboard) return;
+  navigator.clipboard.writeText(btn.getAttribute("data-code")).then(function(){{
+    btn.textContent = "Copied!";
+    setTimeout(function(){{ btn.textContent = btn.getAttribute("data-code"); }}, 1500);
+  }});
+}});
 function imgFallback(img){{
   var rest = (img.getAttribute("data-fallbacks") || "").split("|").filter(Boolean);
   if(!rest.length){{ img.onerror = null; img.style.visibility = "hidden"; return; }}
@@ -668,7 +685,9 @@ they advertise. If you own an image and want it credited, changed or removed, se
 event and the image, and we'll handle it promptly.</p>
 <h2>Affiliate links</h2>
 <p>Some ticket links, including resale links, may be affiliate links. If you buy through one, we may
-earn a commission at no extra cost to you. It doesn't change which events we list or how they're shown.</p>
+earn a commission at no extra cost to you. We also promote some venues' events: discount codes shown on
+the site (for example on CTRL Room shows) are our promoter codes, and we may earn from tickets bought with
+them. None of this changes which events we list or how they're shown.</p>
 <h2>No warranty</h2>
 <p>The site is provided "as is", without warranties of any kind. To the extent the law allows, DFW EDM
 isn't liable for losses from using it or relying on its listings, including cancelled, moved or
