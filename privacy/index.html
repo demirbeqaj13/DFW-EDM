@@ -171,6 +171,9 @@
   .resale a{text-decoration:underline;text-underline-offset:2px;text-decoration-color:#4A4A5A;}
   .resale a:hover{color:var(--text);}
   .info-link{font-weight:600;font-size:14px;color:var(--green);}
+  .promo{font-size:13px;color:var(--sub);margin-top:4px;}
+  .promo-code{margin-left:4px;padding:1px 8px;border:1px dashed var(--green);border-radius:6px;background:none;
+    color:var(--green);font-weight:700;font-size:13px;letter-spacing:.06em;cursor:pointer;}
   .info-link:hover{text-decoration:underline;}
 
   /* Every week carousel */
@@ -266,9 +269,18 @@ came from us, so we can earn a commission. We never receive your purchase or pay
 </main>
 <footer class="wrap">
   <p class="fine">Refreshed every few days &middot; <a href="/">See every Dallas-Fort Worth EDM event</a></p>
-  <p class="fine legal-links">Not affiliated with any venue, promoter, artist or ticket seller. Some ticket links may earn us a commission. &middot; <a href="/privacy/">Privacy</a> &middot; <a href="/terms/">Terms</a></p>
+  <p class="fine legal-links">Not affiliated with any venue, promoter, artist or ticket seller. Some ticket links and discount codes may earn us a commission. &middot; <a href="/privacy/">Privacy</a> &middot; <a href="/terms/">Terms</a></p>
 </footer>
 <script>
+// Tap a discount code to copy it.
+document.addEventListener("click", function(ev){
+  var btn = ev.target.closest && ev.target.closest(".promo-code");
+  if(!btn || !navigator.clipboard) return;
+  navigator.clipboard.writeText(btn.getAttribute("data-code")).then(function(){
+    btn.textContent = "Copied!";
+    setTimeout(function(){ btn.textContent = btn.getAttribute("data-code"); }, 1500);
+  });
+});
 function imgFallback(img){
   var rest = (img.getAttribute("data-fallbacks") || "").split("|").filter(Boolean);
   if(!rest.length){ img.onerror = null; img.style.visibility = "hidden"; return; }

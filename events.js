@@ -3,13 +3,12 @@ const LAST_UPDATED = "2026-11-10";
 const VENUES = {
   "silo": { name: "SILO Dallas", address: "1340 Manufacturing St, Dallas, TX", site: "https://silodallas.com/events", image: "https://silodallas.com/og-image.png" },
   "itlldo": { name: "It'll Do Club", address: "4322 Elm St, Dallas, TX", site: "https://www.itlldoclub.com/", image: "https://static1.squarespace.com/static/687877d212aabf1aafc5c893/t/687883bae925b43e83551a43/1752728506887/_ITLLDOCLUB.png?format=1500w" },
-  "ctrlroom": { name: "CTRL Room Dallas", address: "2511 Swiss Ave, Dallas, TX", site: "https://www.ctrlroomdallas.com/events", image: "https://cdn.prod.website-files.com/69c17a74a763699ce65b1b8d/69c24f01971e47d2420adc69_CTRL-OpenGraph.png" },
+  "ctrlroom": { name: "CTRL Room Dallas", address: "2511 Swiss Ave, Dallas, TX", site: "https://www.ctrlroomdallas.com/events", image: "https://cdn.prod.website-files.com/69c17a74a763699ce65b1b8d/69c24f01971e47d2420adc69_CTRL-OpenGraph.png", promo: "DFWX" },
   "ductwork": { name: "Ductwork at SILO", address: "1340 Manufacturing St, Dallas, TX", site: "https://linktr.ee/ductworkdallas", image: "https://cdn.vor.us/images/white-label/disco-donnie/2025/silo.png" },
   "bombfactory": { name: "The Bomb Factory", address: "2713 Canton St, Dallas, TX", site: "https://www.thebombfactory.com/events", image: null },
   "studiofactory": { name: "The Studio at The Bomb Factory", address: "2727 Canton St, Dallas, TX", site: "https://www.thebombfactory.com/events", image: null },
   "greenelephant": { name: "Green Elephant", address: "5627 Dyer St, Dallas, TX", site: "https://www.greenelephantdallas.com/blank", image: "https://static.wixstatic.com/media/608a53_4a8795eff0ef4c958d80635f6a0fd54a~mv2.jpg/v1/fit/w_480,h_641,q_90,enc_avif,quality_auto/608a53_4a8795eff0ef4c958d80635f6a0fd54a~mv2.jpg" },
   "sounders": { name: "Sounders", address: "1211 E Levee St, Dallas, TX", site: "https://soundersdallas.com/pages/events-tickets", image: "http://soundersdallas.com/cdn/shop/files/Sounders_S_color_glitch_37120522-8de4-4ed4-afcb-543b4dd3907f.png?v=1720894094", noResale: true },
-  "stereolive": { name: "Stereo Live Dallas", address: "N/A - CLOSED", site: "", image: null, closed: true },
   "deepellumartco": { name: "Deep Ellum Art Co", address: "2803 Taylor St, Dallas, TX", site: "https://www.deepellumart.co/shows", image: null },
   "toyotamusic": { name: "Toyota Music Factory / The Pavilion", address: "316 W Las Colinas Blvd, Irving, TX", site: "https://www.toyotamusicfactory.com/upcoming-events", image: "http://static1.squarespace.com/static/66c54e6343eaf22d36c6af9a/t/67f69768927e4602153370d3/1744213864932/TMF-SocialSharing-1080x1080.jpg?format=1500w" },
   "dosequis": { name: "Dos Equis Pavilion", address: "3839 S Fitzhugh Ave, Dallas, TX", site: "https://www.dosequispavilion.com/events", image: null },
@@ -165,4 +164,3 @@ const EVENTS = [
   { artist: "Sunset Sessions", venue: "rubyroom", date: null, time: "4:00 PM - 2:00 AM", genre: "House", direct: "https://www.instagram.com/sunset_sessionsdtx/", image: "img/sunset-sessions.jpg", recurring: "Every Sunday", resale: [] },
 ];
 
-const CLOSED_VENUES_NOTE = "Stereo Live Dallas closed permanently in early 2026 and is no longer booking shows. Kept here for reference only.";
