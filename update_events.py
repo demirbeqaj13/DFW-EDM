@@ -454,8 +454,10 @@ TASK:
    "free": true when the listing says free entry / free with RSVP. Check every source listed for them
    in 5a -- their news posts are where new nights appear first -- and also web_search each series
    name + "Sounders Dallas" (Eventbrite, Eventim, ma.to) to find its dated listings. Every event here
-   needs a real date and the specific night's own post or ticket page as "direct"; never list a series
-   without a date or point "direct" at a generic news / events index page.
+   needs a real date and the specific night's own post or ticket page as "direct", copied exactly from
+   a link on soundersdallas.com/blogs/news (or its ticket page) -- Sounders post addresses look regular,
+   but never build one from the night's name and date. Never list a series without a date, and never
+   use a search page or a general listing site (19hz, do214...) as "direct".
 6b. SHYBOY HI-FI -- a downtown hi-fi listening bar that books DJ nights and residencies, many of them
    FREE (no ticket). Include its DJ / dance-music nights (house, techno, disco, dance, electronic) whether
    free or ticketed; besides its own site, check its Resident Advisor (ra.co) and ma.to listings. For a
@@ -1552,6 +1554,88 @@ def fix_direct_links(events):
           + (f"; {len(unresolved)} pointed at the venue's events page instead: {', '.join(unresolved)}" if unresolved else "."))
 
 
+# Links that never open a show's own page: site searches, general listing
+# sites, and ticket-site search results. Research sometimes lands on these.
+_NON_EVENT_LINK = re.compile(
+    r"(wafform\.aspx|[?&](_act=search|search=|q=)|/search\b|19hz\.info|do214\.com|jambase\.com|"
+    r"concertfix\.com|concerts50\.com|nextlvlevent\.com|dallas-tx\.events)", re.I)
+
+# Venues that post each night as its own page on their website. The link must
+# be one of those real posts -- read off the venue's news pages, matched on the
+# night's name AND date (series like "House on Levee St." repeat weekly) --
+# never a guessed address. Failing that, the venue's events page.
+VENUE_POST_PAGES = {
+    "sounders": {
+        "post": re.compile(r"(?:https?://(?:www\.)?soundersdallas\.com)?/blogs/news/[a-z0-9-]+", re.I),
+        "base": "https://soundersdallas.com",
+        "listings": ["https://soundersdallas.com/blogs/news", "https://soundersdallas.com/blogs/news?page=2",
+                     "https://www.hampromos.com/blogs/news"],
+        "fallback": "https://soundersdallas.com/pages/events-tickets",
+    },
+}
+_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august",
+           "september", "october", "november", "december"]
+
+
+def post_for_night(links, e):
+    """The one post among `links` whose address names this night's date and
+    (most of) its title, else None."""
+    d = date.fromisoformat(e["date"])
+    on_date = re.compile(rf"{_MONTHS[d.month - 1]}-{d.day}(?:st|nd|rd|th)?\b")
+    # The night's main title: "House on Levee St. (Home for the Holidays)" -> house, levee.
+    title = re.split(r"\s*[(:]", e.get("artist") or "")[0]
+    want = {w for w in _name_words(title) if len(w) >= 3}
+    scored = []
+    for url in links:
+        slug = url.rstrip("/").rsplit("/", 1)[-1].lower()
+        if not on_date.search(slug):
+            continue
+        words = set(re.findall(r"[a-z0-9]+", slug))
+        scored.append((len(want & words) / len(want) if want else 0, url))
+    best = max((score for score, _ in scored), default=0)
+    hits = [u for score, u in scored if score == best and score >= 0.5]
+    return hits[0] if len(hits) == 1 else None
+
+
+def fix_post_links(events):
+    """Give every show at VENUE_POST_PAGES venues its real post (or the
+    venue's events page), and swap search / listing-site links at any venue
+    for the venue's own page."""
+    for e in events:
+        if (e.get("venue") not in OFFICIAL_TICKET_LINKS and e.get("venue") not in VENUE_POST_PAGES
+                and _NON_EVENT_LINK.search(e.get("direct") or "")):
+            e["direct"] = VENUES.get(e["venue"], {}).get("site") or e["direct"]
+    today = date.today().isoformat()
+    for venue, rules in VENUE_POST_PAGES.items():
+        shows = [e for e in events if e.get("venue") == venue and (e.get("date") or "") >= today]
+        if not shows:
+            continue
+        with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+            pages = list(pool.map(lambda u: fetch_html(u)[0], rules["listings"]))
+        posts = list(dict.fromkeys(
+            urljoin(rules["base"], m.group(0)).split("?")[0]
+            for page in pages if page for m in rules["post"].finditer(html.unescape(page))
+            if not m.group(0).rstrip("/").endswith("/news")))
+        # A post link already on a show counts only if it's on the venue's
+        # pages; if those couldn't be read, a link that loads is kept.
+        def ok(url):
+            if not rules["post"].fullmatch(url or "") or _is_index_url(url):
+                return False
+            return url.split("?")[0] in posts if posts else not link_is_dead(url)
+        with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+            good = list(pool.map(lambda e: ok(e.get("direct")), shows))
+        fixed = fallback = 0
+        for e, keep in zip(shows, good):
+            if keep:
+                continue
+            url = post_for_night(posts, e)
+            e["direct"] = url or rules["fallback"]
+            fixed += bool(url)
+            fallback += not url
+        print(f"{VENUES[venue]['name']} links: {len(posts)} posts found on its pages; replaced {fixed + fallback} "
+              f"link(s) ({fixed} with the night's own post, {fallback} with the venue's events page).")
+
+
 GENRE_LOOKUP_SYSTEM_PROMPT = f"""You classify electronic music acts playing in Dallas-Fort Worth.
 For each numbered act, decide which ONE of these genres best describes what they play NOW:
 {", ".join(MAIN_GENRES)}.
@@ -1737,6 +1821,7 @@ def maintenance_only(client):
     data = {"last_updated": saved.get("last_updated"), "events": saved["events"],
             "venue_images": current_venue_images() or VENUE_FALLBACK_IMAGES}
     fix_direct_links(data["events"])
+    fix_post_links(data["events"])
     data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
     fill_focus(client, data["events"], data["venue_images"])
     print_usage_summary()
@@ -1766,6 +1851,7 @@ def main():
     data["events"] = drop_undated_non_weekly(data["events"])
     data["events"] = file_late_shows_under_night_before(data["events"])
     fix_direct_links(data["events"])
+    fix_post_links(data["events"])
     data["venue_images"] = venue_logo_images()
     missing = fill_event_images(data["events"], data["venue_images"])
     skipped = [e for e in missing if checked_recently(e, "image_checked", IMAGE_LOOKUP_RECHECK_DAYS, today_str)]
