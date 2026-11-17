@@ -149,7 +149,7 @@ def genre_pill(g):
 
 def card_html(e, venues, base=""):
     title, lineup = split_title(e["artist"])
-    meta = " &middot; ".join(esc(x) for x in (short_time(e.get("time")), venue_name(e, venues), e.get("price")) if x)
+    meta = " &middot; ".join(esc(x) for x in (short_time(e.get("time")), venue_name(e, venues)) if x)
     if e.get("free"):
         actions = (f'<a class="info-link" href="{esc(e["direct"])}" target="_blank" rel="noopener"'
                    f' aria-label="Event info: {esc(e["artist"])}">Event info &rarr;</a>')

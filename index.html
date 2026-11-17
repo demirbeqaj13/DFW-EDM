@@ -481,7 +481,7 @@ function imgFallback(img){
 
   function cardHTML(e){
     var t = splitTitle(e.artist);
-    var meta = [shortTime(e.time), venueName(e), e.price].filter(Boolean).map(esc).join(" &middot; ");
+    var meta = [shortTime(e.time), venueName(e)].filter(Boolean).map(esc).join(" &middot; ");
     var actions;
     if(e.free){
       actions = '<a class="info-link" href="' + esc(e.direct) + '" target="_blank" rel="noopener" aria-label="Event info: ' + esc(e.artist) + '">Event info &rarr;</a>';
