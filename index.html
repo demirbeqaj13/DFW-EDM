@@ -144,7 +144,12 @@
   .day-count{font-weight:500;font-size:11.5px;letter-spacing:.6px;color:var(--tertiary);white-space:nowrap;}
   .day-count .soon{color:var(--pink);}
   .cards{display:grid;grid-template-columns:1fr;gap:10px;}
-  @media (min-width:760px){ .cards{grid-template-columns:1fr 1fr;} }
+  @media (min-width:760px){
+    .cards{grid-template-columns:1fr 1fr;}
+    /* Cards in a row stretch to the tallest one; keep each card's buttons
+       right under its own details instead of pushed to the bottom. */
+    .cards .actions{margin-top:0;}
+  }
 
   .ev{
     display:flex;gap:14px;padding:10px;border-radius:16px;
@@ -476,7 +481,7 @@ function imgFallback(img){
 
   function cardHTML(e){
     var t = splitTitle(e.artist);
-    var meta = [shortTime(e.time), venueName(e), e.price].filter(Boolean).map(esc).join(" &middot; ");
+    var meta = [shortTime(e.time), venueName(e)].filter(Boolean).map(esc).join(" &middot; ");
     var actions;
     if(e.free){
       actions = '<a class="info-link" href="' + esc(e.direct) + '" target="_blank" rel="noopener" aria-label="Event info: ' + esc(e.artist) + '">Event info &rarr;</a>';
