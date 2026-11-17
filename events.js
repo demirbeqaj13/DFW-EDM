@@ -9,7 +9,7 @@ const VENUES = {
   "studiofactory": { name: "The Studio at The Bomb Factory", address: "2727 Canton St, Dallas, TX", site: "https://www.thebombfactory.com/events", image: null },
   "greenelephant": { name: "Green Elephant", address: "5627 Dyer St, Dallas, TX", site: "https://www.greenelephantdallas.com/blank", image: "https://static.wixstatic.com/media/608a53_4a8795eff0ef4c958d80635f6a0fd54a~mv2.jpg/v1/fit/w_480,h_641,q_90,enc_avif,quality_auto/608a53_4a8795eff0ef4c958d80635f6a0fd54a~mv2.jpg" },
   "sounders": { name: "Sounders", address: "1211 E Levee St, Dallas, TX", site: "https://soundersdallas.com/pages/events-tickets", image: "http://soundersdallas.com/cdn/shop/files/Sounders_S_color_glitch_37120522-8de4-4ed4-afcb-543b4dd3907f.png?v=1720894094", noResale: true },
-  "deepellumartco": { name: "Deep Ellum Art Co", address: "2803 Taylor St, Dallas, TX", site: "https://www.deepellumart.co/shows", image: null },
+  "deepellumartco": { name: "Deep Ellum Art Co", address: "3200 Commerce St, Dallas, TX", site: "https://www.deepellumart.co/shows", image: null },
   "toyotamusic": { name: "Toyota Music Factory / The Pavilion", address: "316 W Las Colinas Blvd, Irving, TX", site: "https://www.toyotamusicfactory.com/upcoming-events", image: "http://static1.squarespace.com/static/66c54e6343eaf22d36c6af9a/t/67f69768927e4602153370d3/1744213864932/TMF-SocialSharing-1080x1080.jpg?format=1500w" },
   "dosequis": { name: "Dos Equis Pavilion", address: "3839 S Fitzhugh Ave, Dallas, TX", site: "https://www.dosequispavilion.com/events", image: null },
   "dickies": { name: "Dickies Arena", address: "1911 Montgomery St, Fort Worth, TX", site: "https://dickiesarena.com/events", image: null },
