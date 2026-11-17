@@ -47,7 +47,7 @@ VENUES = {
     "studiofactory": {"name": "The Studio at The Bomb Factory", "address": "2727 Canton St, Dallas, TX", "site": "https://www.thebombfactory.com/events"},
     "greenelephant": {"name": "Green Elephant", "address": "5627 Dyer St, Dallas, TX", "site": "https://www.greenelephantdallas.com/blank"},
     "sounders": {"name": "Sounders", "address": "1211 E Levee St, Dallas, TX", "site": "https://soundersdallas.com/pages/events-tickets"},
-    "deepellumartco": {"name": "Deep Ellum Art Co", "address": "2803 Taylor St, Dallas, TX", "site": "https://www.deepellumart.co/shows"},
+    "deepellumartco": {"name": "Deep Ellum Art Co", "address": "3200 Commerce St, Dallas, TX", "site": "https://www.deepellumart.co/shows"},
     "toyotamusic": {"name": "Toyota Music Factory / The Pavilion", "address": "316 W Las Colinas Blvd, Irving, TX", "site": "https://www.toyotamusicfactory.com/upcoming-events"},
     "dosequis": {"name": "Dos Equis Pavilion", "address": "3839 S Fitzhugh Ave, Dallas, TX", "site": "https://www.dosequispavilion.com/events"},
     "dickies": {"name": "Dickies Arena", "address": "1911 Montgomery St, Fort Worth, TX", "site": "https://dickiesarena.com/events"},
@@ -65,7 +65,11 @@ VENUES = {
 # among dozens of non-electronic bookings, or where the calendar page paginates
 # by month and doesn't surface far-out shows on the first fetch. These get an
 # extra, mandatory cross-check search rather than relying on a single page fetch.
-HIGH_RISK_MIXED_GENRE_VENUES = ["dickies", "dosequis", "toyotamusic", "bombfactory", "studiofactory"]
+# Deep Ellum Art Co is a mid-size hall in the same spot: bands, comedy and
+# theater most nights, but it regularly books electronic acts (Seth David,
+# Chozen, The Floozies, Kučka) that its own page alone kept missing.
+HIGH_RISK_MIXED_GENRE_VENUES = ["dickies", "dosequis", "toyotamusic", "bombfactory", "studiofactory",
+                                "deepellumartco"]
 
 # Venues that book a heavy mix of non-electronic acts (hip hop, country,
 # reality-TV-personality "DJ" sets, etc.) alongside real electronic artists.
@@ -88,6 +92,9 @@ VENUE_SECONDARY_SOURCES = {
     # Sounders posts each night as a news post; H.A.M. Promotions (its
     # promoter) and ma.to list them too.
     "sounders": "https://soundersdallas.com/blogs/news + https://www.hampromos.com/blogs/news + https://ma.to/venue/soundersdallas",
+    # Deep Ellum Art Co's electronic bookings (often via sd Presents) show up on
+    # these listings before / when its own shows page doesn't.
+    "deepellumartco": "https://www.songkick.com/venues/3651684-deep-ellum-art-company + https://www.songkick.com/venues/4609755-deep-ellum-art-co + https://www.jambase.com/venue/deep-ellum-art-company",
     # Portal After Hours (Club De Dior) sells through PNPresents / posh.vip and lists on RA.
     "clubdedior": "https://www.instagram.com/portalafterhours/ + posh.vip and ra.co listings for \"Portal After Hours\"",
 }
@@ -405,14 +412,15 @@ TASK:
    Dubstep; trap, phonk -> Trap; bass house -> House; future bass, melodic bass -> Bass; hardstyle, hardcore -> Hard Dance; jungle ->
    Drum & Bass; UK garage, speed garage, bassline, grime -> UK Bass / Garage; chill / ambient -> Downtempo).
 4. HIGH-RISK VENUES -- {", ".join(VENUES[k]["name"] for k in HIGH_RISK_MIXED_GENRE_VENUES)}: these are
-   large arenas/amphitheaters that book mostly non-electronic acts (country, rock, family shows,
-   comedy, sports), which makes it easy to skim past the one big EDM headliner buried in a long
+   arenas, amphitheaters and mixed-genre music halls that book mostly non-electronic acts (country,
+   rock, family shows, comedy, theater, sports), which makes it easy to skim past the EDM acts buried in a long
    calendar, and their calendar pages often paginate by month so a single fetch of the main events
    page may not surface shows that are several months out. For each of these venues you MUST, in
    addition to fetching the venue's own events page, run at least one supplementary web_search
    specifically like "<venue name> 2026 EDM OR electronic OR house OR techno OR dance tour" to catch
    major touring electronic artists (the kind who play arenas -- e.g. John Summit, Kaskade, ILLENIUM,
-   Zedd, Marshmello, Excision, Zeds Dead, Empire of the Sun, etc.) that the calendar page alone might not have surfaced. A missed
+   Zedd, Marshmello, Excision, Zeds Dead, Empire of the Sun, etc.; at Deep Ellum Art Co, mid-size
+   electronic acts like Seth David, Chozen, The Floozies or Kučka) that the calendar page alone might not have surfaced. A missed
    headline arena show is a much worse error than a missed small club night, so err heavily on the
    side of extra searching for these venues specifically.
 5. SELECTIVE-GENRE VENUES -- {", ".join(VENUES[k]["name"] for k in SELECTIVE_GENRE_VENUES)}: unlike
