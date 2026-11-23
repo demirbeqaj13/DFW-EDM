@@ -510,7 +510,7 @@ tag or after the closing tag. Structure:
       "direct": "https://... direct ticket URL",
       "image": "https://... or null",
       "stubhub": "https://www.stubhub.com/.../event/<id>/ real verified listing URL, or null if not found",
-      "free": "optional, true only when the listing says the event is free / no cover",
+      "free": "optional, true only when the listing says the event is free / no cover / free w/ RSVP (or its ticket is $0)",
       "price": "optional, the ticket price exactly as the listing shows it (e.g. '$25' or '$20-$45'), else null -- never estimate",
       "recurring": "optional string, only for undated recurring series like weekly nights"
     }}
@@ -872,6 +872,8 @@ def merge_with_previous(new_events, previous_events, today_str):
             e["image"] = prev["image"]
         if not e.get("stubhub") and prev.get("stubhub"):
             e["stubhub"] = prev["stubhub"]
+        if prev.get("free") is True and "free" not in e:
+            e["free"] = True  # found free earlier (e.g. its ticket page); research didn't say
         for field in ("stubhub_checked", "image_checked"):
             if not e.get(field) and prev.get(field):
                 e[field] = prev[field]
@@ -1717,6 +1719,36 @@ def verify_event_dates(events, filed):
     return [e for e in events if e not in drop]
 
 
+# Free nights (often "FREE w/ RSVP" on CTRL Room's Speakeasy pages) must be
+# marked free, or they show the promoter discount code and resale links.
+# detect_free_shows() reads the ticket page of each show at a promo-code
+# venue: a $0 schema.org price, or "free w/ RSVP", marks it free.
+_FREE_RSVP = re.compile(r"\bfree\s*(?:w/|with|w\.)?\s*(?:an?\s+)?rsvp\b|\brsvp\s+(?:for\s+)?free\b", re.I)
+_OFFER_PRICE = re.compile(r'"(?:price|lowPrice|highPrice)"\s*:\s*"?(\d+(?:\.\d+)?)')
+
+
+def page_says_free(page):
+    if not page:
+        return False
+    prices = [float(p) for p in _OFFER_PRICE.findall(page)]
+    if prices and all(p == 0 for p in prices):
+        return True
+    return bool(_FREE_RSVP.search(html.unescape(re.sub(r"<[^>]+>", " ", page))))
+
+
+def detect_free_shows(events):
+    today = date.today().isoformat()
+    todo = [e for e in events if e.get("venue") in PROMO_CODES and (e.get("date") or "") >= today
+            and e.get("free") is not True and e.get("direct") and not _is_index_url(e["direct"])]
+    with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+        pages = list(pool.map(lambda e: fetch_html(e["direct"])[0], todo))
+    found = [e for e, page in zip(todo, pages) if page_says_free(page)]
+    for e in found:
+        e["free"] = True
+    if found:
+        print("Marked free from their ticket pages: " + ", ".join(f'{e["artist"]} ({e["date"]})' for e in found))
+
+
 GENRE_LOOKUP_SYSTEM_PROMPT = f"""You classify electronic music acts playing in Dallas-Fort Worth.
 For each numbered act, decide which ONE of these genres best describes what they play NOW:
 {", ".join(MAIN_GENRES)}.
@@ -1904,6 +1936,7 @@ def maintenance_only(client):
     fix_direct_links(data["events"])
     fix_post_links(data["events"])
     data["events"] = verify_event_dates(data["events"], filed=True)
+    detect_free_shows(data["events"])
     data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
     fill_focus(client, data["events"], data["venue_images"])
     print_usage_summary()
@@ -1934,6 +1967,7 @@ def main():
     fix_direct_links(data["events"])
     fix_post_links(data["events"])
     data["events"] = verify_event_dates(data["events"], filed=False)
+    detect_free_shows(data["events"])
     data["events"] = file_late_shows_under_night_before(data["events"])
     data["venue_images"] = venue_logo_images()
     missing = fill_event_images(data["events"], data["venue_images"])
