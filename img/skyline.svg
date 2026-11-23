@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 420" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#17171F" stop-opacity=".35"/>
+      <stop offset=".4" stop-color="#17171F" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#17171F"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#fade)">
+    <!-- low buildings out to the edges -->
+    <path d="M0 420V350h45v-20h40v35h35v-50h50v70h30v-45h45v20h40v-40h45v55h40v-30h35V280h50v140Z"/>
+    <path d="M1190 420V290h45v-30h50v45h35v-60h50v80h40v-45h45v55h40v-30h45v40h35v-55h40v130Z"/>
+    <!-- Reunion Tower -->
+    <path d="M466 420V190h-4l6-9h8l6 9h-4v230Z"/>
+    <circle cx="472" cy="162" r="25"/>
+    <path d="M459 420l9-110h8l9 110Z"/>
+    <!-- Hyatt Regency -->
+    <path d="M500 420V296l62-12v136Z"/>
+    <!-- Thanksgiving Tower -->
+    <path d="M588 420V128h52v292Z"/>
+    <!-- Comerica Bank Tower (stepped crown) -->
+    <path d="M650 420V112h10V99h10V87h24v12h10v13h10v308Z"/>
+    <!-- Bank of America Plaza -->
+    <path d="M728 420V38h70v382Z"/>
+    <!-- Renaissance Tower (twin spires) -->
+    <path d="M816 420V96l8-8h46l8 8v324Z"/>
+    <path d="M830 88V30h4v58Zm28 0V30h4v58Z"/>
+    <!-- Fountain Place (prism top) -->
+    <path d="M896 420V136l32-84 30 104v264Z"/>
+    <!-- Chase Tower (keyhole crown) -->
+    <path fill-rule="evenodd" d="M974 420V74h60v346ZM994 94v26h20V94Z"/>
+    <!-- mid-rise filler -->
+    <path d="M560 420V250h30v170Zm80 0V200h12v220Zm148 0V190h30v230Zm72 0V230h28v190Zm96 0V210h22v210Zm78 0V240h46v-35h50v-25h36v240Z"/>
+  </g>
+</svg>

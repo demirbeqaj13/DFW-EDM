@@ -44,6 +44,12 @@
   }
   *{box-sizing:border-box;}
   html{-webkit-text-size-adjust:100%;}
+  /* Dallas skyline, fixed along the bottom and only a shade lighter than the
+     background; cards stay solid on top of it. */
+  body::before{
+    content:"";position:fixed;left:0;right:0;bottom:0;height:clamp(210px,20vw + 130px,380px);z-index:-1;pointer-events:none;
+    background:url(img/skyline.svg) center bottom / auto 100% no-repeat;
+  }
   body{
     margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.45;
     -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
