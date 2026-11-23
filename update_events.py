@@ -446,6 +446,9 @@ TASK:
    Ductwork sell on Eventim / SeeTickets (wl.eventim.us/event/<NAME>/<id>; old wl.seetickets.us links work too);
    It'll Do Club sells on
    Eventbrite (eventbrite.com/e/...-<id>).
+   YEARS: calendars often show a date with no year ("Sat, Feb 28"). Take the year from the page
+   itself or the show's ticket page; a date that has already passed this year is a PAST show -- leave
+   it out, never move it to next year. Report the weekday the listing shows in "weekday".
 6c. EVENT-CENTERED VENUES -- {", ".join(VENUES[k]["name"] for k in EVENT_CENTERED_VENUES)}: these book
    themed nights and series (e.g. Sounders' "House on Levee St.", "Hard Wired", "Techno & Tequila",
    "Freakquency") more than named headliners. Include every upcoming electronic/dance night even when
@@ -501,6 +504,7 @@ tag or after the closing tag. Structure:
       "artist": "string",
       "venue": "one of the venue keys above",
       "date": "YYYY-MM-DD the show starts (a 1 AM Saturday start is Saturday; the script files it under Friday night); null ONLY for a series that runs every week, with \"recurring\" set",
+      "weekday": "the day of the week the listing shows next to that date, e.g. \"Sat\" (omit if it shows none)",
       "time": "string, e.g. '9:00 PM'",
       "genre": "exactly one of the main genres listed above, e.g. 'House' or 'Techno'",
       "direct": "https://... direct ticket URL",
@@ -1636,6 +1640,83 @@ def fix_post_links(events):
               f"link(s) ({fixed} with the night's own post, {fallback} with the venue's events page).")
 
 
+# Venue calendars often show "Sat, Feb 28" with no year, and research has
+# filed shows that already happened under next year (CID, Chris Lorenzo:
+# February 2026 shows listed as February 2027). verify_event_dates() checks
+# each show two ways: the weekday the listing shows (research reports it),
+# and the date on the show's own ticket page. A show whose real date has
+# passed is dropped; one that's really on a later date is moved there.
+_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+_PAGE_START_DATE = re.compile(r'"startDate"\s*:\s*"(\d{4}-\d{2}-\d{2})')
+
+
+def _weekday_index(label):
+    label = (label or "").strip().lower()[:3]
+    return _WEEKDAYS.index(label) if label in _WEEKDAYS else None
+
+
+def page_start_date(url):
+    """The one schema.org startDate on a show's ticket page, or None."""
+    page, _ = fetch_html(url)
+    dates = set(_PAGE_START_DATE.findall(page or ""))
+    return date.fromisoformat(dates.pop()) if len(dates) == 1 else None
+
+
+def verify_event_dates(events, filed):
+    """Drop shows that already happened and fix misdated ones. `filed` says
+    whether after-hours shows have already been moved to the night before
+    (see file_late_shows_under_night_before), which the checks allow for."""
+    today = date.today()
+    late = lambda e: (start_hour(e.get("time")) or 99) < LATE_NIGHT_CUTOFF_HOUR
+    drop, moved = [], []
+
+    def settle(e, real_start):
+        """real_start: the show's actual start date per the evidence."""
+        night = real_start - timedelta(days=1) if filed and late(e) else real_start
+        if real_start < today:
+            drop.append(e)
+        elif night.isoformat() != e["date"]:
+            moved.append(f'{e.get("artist")} {e["date"]} -> {night.isoformat()}')
+            e["date"] = night.isoformat()
+
+    # 1. Weekday shown on the listing vs the date's weekday (this run's
+    #    research only; not kept, since filing can shift the date later).
+    for e in events:
+        want = _weekday_index(e.pop("weekday", None))
+        if want is None or not e.get("date") or filed:
+            continue
+        d = date.fromisoformat(e["date"])
+        if d.weekday() == want:
+            continue
+        for years in (-1, 1):
+            try:
+                other = d.replace(year=d.year + years)
+            except ValueError:
+                continue
+            if other.weekday() == want:
+                settle(e, other)
+                break
+
+    # 2. The date on the show's own ticket page.
+    check = [e for e in events if e not in drop and e.get("date") and e["date"] >= today.isoformat()
+             and e.get("direct") and not _is_index_url(e["direct"]) and not _NON_EVENT_LINK.search(e["direct"])]
+    with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
+        found = list(pool.map(lambda e: page_start_date(e["direct"]), check))
+    for e, page_date in zip(check, found):
+        if not page_date:
+            continue
+        start = date.fromisoformat(e["date"]) + (timedelta(days=1) if filed and late(e) else timedelta())
+        if abs((page_date - start).days) > 2:  # a different show date, not a time-zone edge
+            settle(e, page_date)
+
+    if moved:
+        print("Fixed show dates from the listing / ticket page: " + "; ".join(moved))
+    if drop:
+        print("Dropped shows that already happened (listed under the wrong year): "
+              + ", ".join(f'{e.get("artist")} ({e.get("date")})' for e in drop))
+    return [e for e in events if e not in drop]
+
+
 GENRE_LOOKUP_SYSTEM_PROMPT = f"""You classify electronic music acts playing in Dallas-Fort Worth.
 For each numbered act, decide which ONE of these genres best describes what they play NOW:
 {", ".join(MAIN_GENRES)}.
@@ -1822,6 +1903,7 @@ def maintenance_only(client):
             "venue_images": current_venue_images() or VENUE_FALLBACK_IMAGES}
     fix_direct_links(data["events"])
     fix_post_links(data["events"])
+    data["events"] = verify_event_dates(data["events"], filed=True)
     data["events"] = dedupe_events(data["events"], set(data["venue_images"].values()))
     fill_focus(client, data["events"], data["venue_images"])
     print_usage_summary()
@@ -1849,9 +1931,10 @@ def main():
     data["events"] = merge_with_previous(data["events"], previous_events, today_str)
     data["events"] = combine_fixed_weekly(data["events"])
     data["events"] = drop_undated_non_weekly(data["events"])
-    data["events"] = file_late_shows_under_night_before(data["events"])
     fix_direct_links(data["events"])
     fix_post_links(data["events"])
+    data["events"] = verify_event_dates(data["events"], filed=False)
+    data["events"] = file_late_shows_under_night_before(data["events"])
     data["venue_images"] = venue_logo_images()
     missing = fill_event_images(data["events"], data["venue_images"])
     skipped = [e for e in missing if checked_recently(e, "image_checked", IMAGE_LOOKUP_RECHECK_DAYS, today_str)]
