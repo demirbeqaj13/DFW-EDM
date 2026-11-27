@@ -20,6 +20,7 @@ const VENUES = {
   "shyboy": { name: "Shyboy Hi-Fi", address: "1313 Main St, Dallas, TX 75202", site: "https://shyboyhifi.com/", image: "https://framerusercontent.com/images/XMFOUqT27uD43nsH5BldXfbUA.png" },
   "clubdedior": { name: "Club De Dior", address: "3650 N Buckner Blvd, Dallas, TX", site: "https://www.instagram.com/portalafterhours/", image: "img/portal-after-hours.jpg" },
   "rubyroom": { name: "Ruby Room", address: "2625 Floyd St, Dallas, TX", site: "https://www.instagram.com/sunset_sessionsdtx/", image: "img/sunset-sessions.jpg" },
+  "akai": { name: "Akai", address: "1740 Crockett St, Dallas, TX 75201", site: "https://www.jambase.com/venue/akai", image: null },
 };
 
 function resale(artist, venueCity) {
