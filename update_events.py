@@ -59,6 +59,12 @@ VENUES = {
     "shyboy": {"name": "Shyboy Hi-Fi", "address": "1313 Main St, Dallas, TX 75202", "site": "https://shyboyhifi.com/"},
     "clubdedior": {"name": "Club De Dior", "address": "3650 N Buckner Blvd, Dallas, TX", "site": "https://www.instagram.com/portalafterhours/"},
     "rubyroom": {"name": "Ruby Room", "address": "2625 Floyd St, Dallas, TX", "site": "https://www.instagram.com/sunset_sessionsdtx/"},
+    # Akai: Japanese-themed nightclub downtown. Mostly hip hop / Top 40 nights,
+    # plus promoter-run house / techno / bass nights (Louder House, Subshift,
+    # Goom Gum...) listed on RA and JamBase. It has no events page of its own,
+    # so "site" is its JamBase venue page ("site_is_listing": never take the
+    # venue logo from it -- that would be JamBase's own graphic).
+    "akai": {"name": "Akai", "address": "1740 Crockett St, Dallas, TX 75201", "site": "https://www.jambase.com/venue/akai", "site_is_listing": True},
 }
 
 # Large, mixed-genre venues where a major touring EDM act can easily get lost
@@ -76,7 +82,9 @@ HIGH_RISK_MIXED_GENRE_VENUES = ["dickies", "dosequis", "toyotamusic", "bombfacto
 # These need extra scrutiny in the OTHER direction from HIGH_RISK_MIXED_GENRE_VENUES:
 # don't just include every billed "DJ" -- verify the act is a genuine
 # electronic/dance music artist before adding them.
-SELECTIVE_GENRE_VENUES = ["villagebeach"]
+# Akai is the same: mostly hip hop / Top 40 club nights (Akai Thursdays,
+# Akai Sundays, Red Wednesdays), with the odd promoter-run house night.
+SELECTIVE_GENRE_VENUES = ["villagebeach", "akai"]
 
 # Some venues' primary website is a slow-moving marketing page that lags behind
 # where they actually announce new bookings. It'll Do Club's own homepage confirmed
@@ -97,6 +105,9 @@ VENUE_SECONDARY_SOURCES = {
     "deepellumartco": "https://www.songkick.com/venues/3651684-deep-ellum-art-company + https://www.songkick.com/venues/4609755-deep-ellum-art-co + https://www.jambase.com/venue/deep-ellum-art-company",
     # Portal After Hours (Club De Dior) sells through PNPresents / posh.vip and lists on RA.
     "clubdedior": "https://www.instagram.com/portalafterhours/ + posh.vip and ra.co listings for \"Portal After Hours\"",
+    # Akai's electronic nights are booked by outside promoters and show up on
+    # RA (e.g. ra.co/events/2332245, Louder House presents Yamagucci).
+    "akai": "ra.co listings for \"Akai\" Dallas (e.g. Louder House nights) + https://app.discotech.me (Akai) + posh.vip / dice.fm / Eventbrite listings for \"Akai Dallas\"",
 }
 
 # Venues whose calendar is built around themed nights / series rather than
@@ -519,7 +530,7 @@ tag or after the closing tag. Structure:
 </events_json>
 
 Be thorough but only include venue keys you actually checked. Today's date will be given in the user message.
-Keep the JSON compact (no extra whitespace/indentation) to conserve output tokens -- there are 17
+Keep the JSON compact (no extra whitespace/indentation) to conserve output tokens -- there are {len([v for v in VENUES.values() if not v.get("closed")])}
 venues to cover and the full list can run to 100+ events, so verbose formatting risks running out of
 room before you finish.
 """
@@ -1141,7 +1152,8 @@ def venue_logo_images():
     """Venue key -> logo/brand image. Hardcoded VENUE_FALLBACK_IMAGES win;
     any other open venue gets its own website's og:image."""
     images = dict(VENUE_FALLBACK_IMAGES)
-    missing = [k for k, v in VENUES.items() if k not in images and v.get("site") and not v.get("closed")]
+    missing = [k for k, v in VENUES.items()
+               if k not in images and v.get("site") and not v.get("closed") and not v.get("site_is_listing")]
     with ThreadPoolExecutor(OG_FETCH_WORKERS) as pool:
         for key, img in zip(missing, pool.map(lambda k: fetch_og_image(VENUES[k]["site"]), missing)):
             if img:
